@@ -15,11 +15,11 @@
   nav{display:flex;background:#16294a;position:sticky;top:0;z-index:5}
   nav button{flex:1;background:none;border:0;color:#cfd8e8;padding:13px 6px;font-size:13px;cursor:pointer;border-bottom:3px solid transparent}
   nav button.on{color:#fff;border-bottom-color:#ffc000;font-weight:600}
-  .wrap{max-width:920px;margin:0 auto;padding:16px}
+  .wrap{max-width:960px;margin:0 auto;padding:16px}
   .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
   label{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#667;margin-bottom:5px}
   input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:15px;font-family:inherit;background:#fff}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
   .btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:15px;cursor:pointer}
   .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
   .btn.wa{background:#25d366}
@@ -45,9 +45,11 @@
   th{background:#eef2f8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#445}
   td.n,th.n{text-align:right}
   tr.tot td{font-weight:700;background:#f3f6fb}
+  tr.short td{color:#9c0006;font-weight:700;background:#fff3f4}
   .hide{display:none}
   .mut{color:#889;font-size:13px}
   h3{margin:20px 0 4px;font-size:15px;color:var(--navy)}
+  h4{margin:14px 0 2px;font-size:13px;color:#334}
   #printArea{display:none}
   @media print{
     body{background:#fff}
@@ -55,9 +57,10 @@
     #printArea{display:block !important;padding:0}
     #printArea h1{font-size:18px;margin:0 0 2px}
     #printArea .sub{font-size:12px;color:#444;margin-bottom:14px}
-    #printArea h3{page-break-after:avoid}
-    table{font-size:11px}
-    @page{size:A4;margin:14mm}
+    #printArea h3,#printArea h4{page-break-after:avoid}
+    table{font-size:10.5px}
+    tr.short td{color:#9c0006 !important;font-weight:700}
+    @page{size:A4;margin:13mm}
   }
 </style>
 </head>
@@ -149,7 +152,10 @@
     </div>
 
     <div id="aBody" class="hide">
+
+      <!-- daily -->
       <div class="card">
+        <h3 style="margin-top:0">Daily report</h3>
         <div class="grid">
           <div><label for="aDate">Report Date</label><input type="date" id="aDate"></div>
           <div style="align-self:end"><button class="btn" onclick="loadAdmin()">Load day</button></div>
@@ -171,13 +177,34 @@
       </div>
 
       <div class="card" id="aDetail" style="display:none">
-        <h3 style="margin-top:0">Detailed attendance summary</h3>
+        <h3 style="margin-top:0">Daily detailed summary</h3>
         <div id="dHtml"></div>
-        <div class="bar">
-          <button class="btn" onclick="savePdf()">Save as PDF</button>
-        </div>
-        <p class="mut" style="margin:10px 0 0">In the print dialog choose <b>Destination &rarr; Save as PDF</b>.</p>
+        <div class="bar"><button class="btn" onclick="printDoc(dailyPrint)">Save daily report as PDF</button></div>
       </div>
+
+      <!-- monthly -->
+      <div class="card">
+        <h3 style="margin-top:0">Monthly / period report</h3>
+        <div class="grid">
+          <div><label for="mFrom">From</label><input type="date" id="mFrom"></div>
+          <div><label for="mTo">To</label><input type="date" id="mTo"></div>
+          <div><label for="mThr">Shortage below (%)</label>
+               <input type="number" id="mThr" value="75" min="1" max="100" step="1"></div>
+          <div style="align-self:end"><button class="btn" onclick="loadMonthly()">Generate</button></div>
+        </div>
+        <p class="mut" style="margin:12px 0 0">Defaults to the 1st of this month up to today. Percentages are based on the classes actually marked in this app.</p>
+      </div>
+
+      <div class="card" id="mOut" style="display:none">
+        <div id="mHtml"></div>
+        <div class="bar">
+          <button class="btn" onclick="printDoc(monthPrint)">Save monthly report as PDF</button>
+          <button class="btn ghost" onclick="dlShortage()">Download shortage list (.txt)</button>
+        </div>
+        <p class="mut" style="margin:10px 0 0">In the print dialog choose <b>Destination &rarr; Save as PDF</b>. Tick <b>Background graphics</b> if you want the shading too.</p>
+        <div id="mMsg2" class="msg" style="margin-top:12px"></div>
+      </div>
+
     </div>
   </div>
 
@@ -190,9 +217,10 @@
 var API = "https://script.google.com/macros/s/AKfycbwC-lcFtK6CajrYS0eZIgcpd0kDz378rPAt6Vy0u7kFGOMLBUzwkfOIgfRZrR99Vgd1/exec";
 
 var STUDENTS = [], rows = [], COLLEGE = "Manas College";
-var ME = { name:"", pin:"" }, ADMIN_PIN = "", admRows = [], parentText = "";
+var ME = { name:"", pin:"" }, ADMIN_PIN = "";
+var admRows = [], parentText = "", dailyPrint = "", monthPrint = "", shortageText = "";
 function $(id){ return document.getElementById(id); }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function esc(s){ return String(s == null ? "" : s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
 /* credentials:"omit" strips the Google session so the call is always
    anonymous - that is what makes this work on any phone. */
@@ -205,24 +233,30 @@ function api(body){
 }
 
 function say(el, text, kind){ el.className = 'msg ' + kind; el.innerHTML = text; }
-function today(){
-  var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
-  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
-}
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function today(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function firstOfMonth(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-01'; }
 function pretty(iso){ if(!iso) return ''; var a = String(iso).split('-'); return a[2]+'-'+a[1]+'-'+a[0]; }
-function pct(p, t){ return t ? (p / t * 100).toFixed(1) + '%' : '-'; }
+function pct(p, t){ return t ? (p / t * 100).toFixed(1) : null; }
+function pctTxt(p, t){ var x = pct(p, t); return x === null ? '-' : x + '%'; }
 
 function show(which){
-  ['mark','mine','adm'].forEach(function(id){
-    $(id).className = (id === which) ? '' : 'hide';
-  });
+  ['mark','mine','adm'].forEach(function(id){ $(id).className = (id === which) ? '' : 'hide'; });
   $('tabMark').className = which === 'mark' ? 'on' : '';
   $('tabMine').className = which === 'mine' ? 'on' : '';
   $('tabAdm').className  = which === 'adm'  ? 'on' : '';
 }
 
+function printDoc(html){
+  if (!html){ alert('Generate the report first.'); return; }
+  $('printArea').innerHTML = html;
+  window.print();
+}
+
 /* ---------- login ---------- */
 ['date','nDate','aDate'].forEach(function(id){ $(id).value = today(); });
+$('mFrom').value = firstOfMonth();
+$('mTo').value   = today();
 
 say($('lMsg'), 'Loading faculty list&hellip;', 'info');
 api({ action:'faculty' })
@@ -232,7 +266,9 @@ api({ action:'faculty' })
       return '<option>' + esc(n) + '</option>'; }).join('');
     var last = localStorage.getItem('mc_fac');
     if (last) $('fName').value = last;
-    $('lMsg').className = 'msg';
+    if (!(j.faculty || []).length){
+      say($('lMsg'), 'The Faculty sheet is empty &mdash; ask the administrator to add names.', 'err');
+    } else { $('lMsg').className = 'msg'; }
   })
   .catch(function(e){ say($('lMsg'), 'Could not reach the server: ' + e.message, 'err'); });
 
@@ -260,8 +296,10 @@ function login(){
 
 function logout(){
   ME = { name:"", pin:"" }; ADMIN_PIN = ""; admRows = [];
+  dailyPrint = monthPrint = shortageText = "";
   $('fPin').value = ''; $('aPin').value = '';
   $('aLock').className = 'card'; $('aBody').className = 'hide';
+  $('mOut').style.display = 'none';
   $('nav').className = 'hide'; $('btnOut').className = 'out hide';
   ['mark','mine','adm'].forEach(function(id){ $(id).className = 'hide'; });
   $('login').className = '';
@@ -315,7 +353,7 @@ function stats(){
   $('sTot').textContent = rows.length;
   $('sPre').textContent = p;
   $('sAbs').textContent = a;
-  $('sPct').textContent = pct(p, rows.length);
+  $('sPct').textContent = pctTxt(p, rows.length);
 }
 function save(){
   if (!rows.length){ say($('mMsg'), 'Nothing to submit.', 'err'); return; }
@@ -349,7 +387,7 @@ function loadMine(){
         return '<div class="card"><h3 style="margin-top:0">' + esc(c.course)
           + ' &mdash; Semester ' + esc(c.sem) + (c.subject ? ' &mdash; ' + esc(c.subject) : '') + '</h3>'
           + '<p class="mut">Strength ' + c.total + ' &nbsp;|&nbsp; Present ' + (c.total - c.abs.length)
-          + ' &nbsp;|&nbsp; Absent ' + c.abs.length + ' &nbsp;|&nbsp; ' + pct(c.total - c.abs.length, c.total) + '</p>'
+          + ' &nbsp;|&nbsp; Absent ' + c.abs.length + ' &nbsp;|&nbsp; ' + pctTxt(c.total - c.abs.length, c.total) + '</p>'
           + (c.abs.length
               ? '<table><thead><tr><th>#</th><th>Roll No</th><th>Absent Student</th></tr></thead><tbody>'
                 + c.abs.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.roll)+'</td><td>'+esc(r.name)+'</td></tr>'; }).join('')
@@ -361,7 +399,7 @@ function loadMine(){
     .catch(function(e){ say($('nMsg'), e.message, 'err'); });
 }
 
-/* ---------- admin ---------- */
+/* ---------- admin unlock ---------- */
 $('aPin').addEventListener('keydown', function(ev){ if (ev.key === 'Enter') unlock(); });
 
 function unlock(){
@@ -408,7 +446,6 @@ function onAdmin(data){
     + ' across ' + sems.length + ' semester(s).', 'ok');
 }
 
-/* group into classes: course + sem + subject + faculty */
 function groupClasses(data){
   var map = {}, keys = [];
   (data || []).forEach(function(r){
@@ -439,20 +476,17 @@ function buildParent(){
   });
   order.sort();
 
-  var L = [];
+  var L = [], any = false;
   L.push(COLLEGE.toUpperCase());
   L.push('Semester ' + sem + ' - Absentees - ' + pretty($('aDate').value));
   L.push('');
-  var any = false;
   order.forEach(function(c){
     L.push(c);
     var names = byCourse[c];
     if (names.length){
       any = true;
       names.forEach(function(n, i){ L.push('  ' + (i+1) + '. ' + n); });
-    } else {
-      L.push('  Nil');
-    }
+    } else { L.push('  Nil'); }
     L.push('');
   });
   if (!any) L.push('No absentees today.');
@@ -479,19 +513,21 @@ function copyParent(){
   }
 }
 
-function dlTxt(){
-  var fn = 'Semester' + $('pSem').value + '_Absentees_' + $('aDate').value + '.txt';
+function download(fn, text){
   var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([parentText], { type:'text/plain;charset=utf-8' }));
+  a.href = URL.createObjectURL(new Blob([text], { type:'text/plain;charset=utf-8' }));
   a.download = fn;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function dlTxt(){
+  var fn = 'Semester' + $('pSem').value + '_Absentees_' + $('aDate').value + '.txt';
+  download(fn, parentText);
   say($('pMsg'), '&#10003; ' + fn + ' downloaded.', 'ok');
 }
 
-/* ---- detailed admin summary ---- */
+/* ---- daily detailed summary ---- */
 function buildDetail(){
-  var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [];
-  var gT = 0, gA = 0;
+  var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [], gT = 0, gA = 0;
   admRows.forEach(function(r){
     if (!semAgg[r.sem]){ semAgg[r.sem] = { t:0, a:0 }; semOrder.push(r.sem); }
     semAgg[r.sem].t++; if (r.status === 'Absent') semAgg[r.sem].a++;
@@ -513,10 +549,10 @@ function buildDetail(){
   semOrder.forEach(function(s){
     var d = semAgg[s];
     h.push('<tr><td>Semester '+esc(s)+'</td><td class="n">'+d.t+'</td><td class="n">'+(d.t-d.a)
-      +'</td><td class="n">'+d.a+'</td><td class="n">'+pct(d.t-d.a, d.t)+'</td></tr>');
+      +'</td><td class="n">'+d.a+'</td><td class="n">'+pctTxt(d.t-d.a, d.t)+'</td></tr>');
   });
   h.push('<tr class="tot"><td>College total</td><td class="n">'+gT+'</td><td class="n">'+(gT-gA)
-    +'</td><td class="n">'+gA+'</td><td class="n">'+pct(gT-gA, gT)+'</td></tr>');
+    +'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
   h.push('<h3>Course-wise summary</h3>');
@@ -524,7 +560,7 @@ function buildDetail(){
   csOrder.forEach(function(k){
     var d = csAgg[k];
     h.push('<tr><td>Sem '+esc(d.sem)+'</td><td>'+esc(d.course)+'</td><td class="n">'+d.t+'</td><td class="n">'
-      +(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'+pct(d.t-d.a, d.t)+'</td></tr>');
+      +(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'+pctTxt(d.t-d.a, d.t)+'</td></tr>');
   });
   h.push('</tbody></table>');
 
@@ -542,13 +578,166 @@ function buildDetail(){
 
   var body = h.join('');
   $('dHtml').innerHTML = body;
-  $('printArea').innerHTML =
-      '<h1>' + esc(COLLEGE) + ' &mdash; Daily Attendance Report</h1>'
+  dailyPrint = '<h1>' + esc(COLLEGE) + ' &mdash; Daily Attendance Report</h1>'
     + '<div class="sub">Date: ' + pretty($('aDate').value)
     + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
 }
 
-function savePdf(){ window.print(); }
+/* ---- monthly / period report ---- */
+function loadMonthly(){
+  var f = $('mFrom').value, t = $('mTo').value;
+  if (!f || !t){ say($('aMsg'), 'Choose both From and To dates.', 'err'); return; }
+  if (f > t){ say($('aMsg'), 'From date must be on or before the To date.', 'err'); return; }
+  say($('aMsg'), 'Building monthly report&hellip;', 'info');
+  $('mOut').style.display = 'none';
+  api({ action:'monthly', adminPin:ADMIN_PIN, from:f, to:t })
+    .then(function(j){ $('aMsg').className = 'msg'; buildMonthly(j.students); })
+    .catch(function(e){ say($('aMsg'), e.message, 'err'); });
+}
+
+function buildMonthly(list){
+  list = list || [];
+  if (!list.length){
+    say($('aMsg'), 'No attendance recorded between ' + pretty($('mFrom').value)
+      + ' and ' + pretty($('mTo').value) + '.', 'err');
+    return;
+  }
+  var thr = parseFloat($('mThr').value) || 75;
+  var period = pretty($('mFrom').value) + ' to ' + pretty($('mTo').value);
+
+  list.forEach(function(s){
+    s.absent = s.held - s.present;
+    s.p = s.held ? (s.present / s.held * 100) : null;
+    s.short = (s.p !== null && s.p < thr);
+  });
+
+  /* aggregates */
+  var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [];
+  var gHeld = 0, gPres = 0, gShort = 0;
+  list.forEach(function(s){
+    if (!semAgg[s.sem]){ semAgg[s.sem] = { stu:0, held:0, pres:0, short:0 }; semOrder.push(s.sem); }
+    var A = semAgg[s.sem];
+    A.stu++; A.held += s.held; A.pres += s.present; if (s.short) A.short++;
+    var k = s.sem + '||' + s.course;
+    if (!csAgg[k]){ csAgg[k] = { sem:s.sem, course:s.course, stu:0, held:0, pres:0, short:0 }; csOrder.push(k); }
+    var B = csAgg[k];
+    B.stu++; B.held += s.held; B.pres += s.present; if (s.short) B.short++;
+    gHeld += s.held; gPres += s.present; if (s.short) gShort++;
+  });
+  var bySem = function(a,b){ return (+a||0) - (+b||0); };
+  semOrder.sort(bySem);
+  csOrder.sort(function(a,b){
+    var A = csAgg[a], B = csAgg[b];
+    if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
+    return A.course.localeCompare(B.course);
+  });
+
+  var h = [];
+
+  h.push('<h3>Semester-wise summary</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th class="n">Students</th><th class="n">Sessions</th>'
+       + '<th class="n">Present</th><th class="n">Attendance %</th><th class="n">Below '+thr+'%</th></tr></thead><tbody>');
+  semOrder.forEach(function(s){
+    var d = semAgg[s];
+    h.push('<tr><td>Semester '+esc(s)+'</td><td class="n">'+d.stu+'</td><td class="n">'+d.held
+      +'</td><td class="n">'+d.pres+'</td><td class="n">'+pctTxt(d.pres, d.held)
+      +'</td><td class="n">'+d.short+'</td></tr>');
+  });
+  h.push('<tr class="tot"><td>College total</td><td class="n">'+list.length+'</td><td class="n">'+gHeld
+    +'</td><td class="n">'+gPres+'</td><td class="n">'+pctTxt(gPres, gHeld)
+    +'</td><td class="n">'+gShort+'</td></tr>');
+  h.push('</tbody></table>');
+
+  h.push('<h3>Course-wise summary</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th>Course / Department</th><th class="n">Students</th>'
+       + '<th class="n">Sessions</th><th class="n">Attendance %</th><th class="n">Below '+thr+'%</th></tr></thead><tbody>');
+  csOrder.forEach(function(k){
+    var d = csAgg[k];
+    h.push('<tr><td>Sem '+esc(d.sem)+'</td><td>'+esc(d.course)+'</td><td class="n">'+d.stu
+      +'</td><td class="n">'+d.held+'</td><td class="n">'+pctTxt(d.pres, d.held)
+      +'</td><td class="n">'+d.short+'</td></tr>');
+  });
+  h.push('</tbody></table>');
+
+  /* shortage list, semester then course */
+  var shorts = list.filter(function(s){ return s.short; });
+  shorts.sort(function(a,b){
+    if ((+a.sem||0) !== (+b.sem||0)) return (+a.sem||0) - (+b.sem||0);
+    if (a.course !== b.course) return a.course.localeCompare(b.course);
+    return a.p - b.p;
+  });
+
+  h.push('<h3>Shortage list &mdash; below ' + thr + '% attendance</h3>');
+  if (!shorts.length){
+    h.push('<p class="mut">No student is below ' + thr + '% in this period.</p>');
+  } else {
+    var lastKey = '';
+    h.push('<table><thead><tr><th>Semester</th><th>Course</th><th>Roll No</th><th>Student Name</th>'
+         + '<th class="n">Sessions</th><th class="n">Present</th><th class="n">Absent</th><th class="n">%</th></tr></thead><tbody>');
+    shorts.forEach(function(s){
+      h.push('<tr class="short"><td>Sem '+esc(s.sem)+'</td><td>'+esc(s.course)+'</td><td>'+esc(s.roll)
+        +'</td><td>'+esc(s.name)+'</td><td class="n">'+s.held+'</td><td class="n">'+s.present
+        +'</td><td class="n">'+s.absent+'</td><td class="n">'+s.p.toFixed(1)+'%</td></tr>');
+    });
+    h.push('</tbody></table>');
+  }
+
+  /* full list grouped semester then course */
+  h.push('<h3>Full student list (semester-wise, course-wise)</h3>');
+  csOrder.forEach(function(k){
+    var d = csAgg[k];
+    var grp = list.filter(function(s){ return s.sem === d.sem && s.course === d.course; });
+    grp.sort(function(a,b){ return a.roll.localeCompare(b.roll); });
+    h.push('<h4>Semester ' + esc(d.sem) + ' &mdash; ' + esc(d.course)
+      + ' &nbsp;(' + grp.length + ' students, ' + pctTxt(d.pres, d.held) + ' overall)</h4>');
+    h.push('<table><thead><tr><th class="n">#</th><th>Roll No</th><th>Student Name</th>'
+         + '<th class="n">Sessions</th><th class="n">Present</th><th class="n">Absent</th>'
+         + '<th class="n">%</th><th>Status</th></tr></thead><tbody>');
+    grp.forEach(function(s, i){
+      h.push('<tr'+(s.short?' class="short"':'')+'><td class="n">'+(i+1)+'</td><td>'+esc(s.roll)
+        +'</td><td>'+esc(s.name)+'</td><td class="n">'+s.held+'</td><td class="n">'+s.present
+        +'</td><td class="n">'+s.absent+'</td><td class="n">'+(s.p===null?'-':s.p.toFixed(1)+'%')
+        +'</td><td>'+(s.short?'SHORT':'OK')+'</td></tr>');
+    });
+    h.push('</tbody></table>');
+  });
+
+  var body = h.join('');
+  $('mHtml').innerHTML = body;
+  $('mOut').style.display = 'block';
+
+  monthPrint = '<h1>' + esc(COLLEGE) + ' &mdash; Monthly Attendance Report</h1>'
+    + '<div class="sub">Period: ' + period + ' &nbsp;|&nbsp; Shortage threshold: ' + thr + '%'
+    + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
+
+  /* plain-text shortage list */
+  var L = [];
+  L.push(COLLEGE.toUpperCase());
+  L.push('ATTENDANCE SHORTAGE LIST (below ' + thr + '%)');
+  L.push('Period: ' + period);
+  L.push('');
+  if (!shorts.length){ L.push('No student is below ' + thr + '%.'); }
+  else {
+    var cur = '';
+    shorts.forEach(function(s){
+      var key = 'Semester ' + s.sem + ' - ' + s.course;
+      if (key !== cur){ if (cur) L.push(''); L.push(key); cur = key; }
+      L.push('  ' + s.roll + ' - ' + s.name + '  (' + s.present + '/' + s.held + ' = ' + s.p.toFixed(1) + '%)');
+    });
+  }
+  L.push('');
+  L.push('- ' + COLLEGE);
+  shortageText = L.join('\n');
+
+  say($('aMsg'), '&#10003; Monthly report ready &mdash; ' + list.length + ' students, '
+    + gShort + ' below ' + thr + '%.', 'ok');
+}
+
+function dlShortage(){
+  var fn = 'Attendance_Shortage_' + $('mFrom').value + '_to_' + $('mTo').value + '.txt';
+  download(fn, shortageText);
+  say($('mMsg2'), '&#10003; ' + fn + ' downloaded.', 'ok');
+}
 </script>
 </body>
 </html>
