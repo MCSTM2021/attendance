@@ -8,13 +8,14 @@
   :root{--navy:#1f3864;--line:#dde1e8}
   *{box-sizing:border-box}
   body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#f4f6fa;color:#222;font-size:15px}
-  header{background:var(--navy);color:#fff;padding:14px 18px}
+  header{background:var(--navy);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
   header h1{margin:0;font-size:17px}
   header p{margin:3px 0 0;font-size:12px;opacity:.8}
+  header .out{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;white-space:nowrap}
   nav{display:flex;background:#16294a;position:sticky;top:0;z-index:5}
-  nav button{flex:1;background:none;border:0;color:#cfd8e8;padding:13px 8px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent}
+  nav button{flex:1;background:none;border:0;color:#cfd8e8;padding:13px 6px;font-size:13px;cursor:pointer;border-bottom:3px solid transparent}
   nav button.on{color:#fff;border-bottom-color:#ffc000;font-weight:600}
-  .wrap{max-width:900px;margin:0 auto;padding:16px}
+  .wrap{max-width:920px;margin:0 auto;padding:16px}
   .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
   label{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#667;margin-bottom:5px}
   input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:15px;font-family:inherit;background:#fff}
@@ -38,34 +39,70 @@
   .msg.ok{background:#e7f6ea;color:#145c28;border:1px solid #a9d9b6;display:block}
   .msg.err{background:#fdeaea;color:#8b1a1a;border:1px solid #e9b4b4;display:block}
   .msg.info{background:#eaf1fb;color:#1b3d70;border:1px solid #b6cbe9;display:block}
-  pre{background:#fbfcfd;border:1px solid var(--line);border-radius:6px;padding:13px;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;font-size:13px;max-height:420px;overflow:auto}
+  pre{background:#fbfcfd;border:1px solid var(--line);border-radius:6px;padding:13px;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;font-size:13px;max-height:400px;overflow:auto}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+  th,td{padding:7px 9px;border:1px solid #cfd5e0;text-align:left}
+  th{background:#eef2f8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#445}
+  td.n,th.n{text-align:right}
+  tr.tot td{font-weight:700;background:#f3f6fb}
   .hide{display:none}
   .mut{color:#889;font-size:13px}
+  h3{margin:20px 0 4px;font-size:15px;color:var(--navy)}
+  #printArea{display:none}
+  @media print{
+    body{background:#fff}
+    body > *{display:none !important}
+    #printArea{display:block !important;padding:0}
+    #printArea h1{font-size:18px;margin:0 0 2px}
+    #printArea .sub{font-size:12px;color:#444;margin-bottom:14px}
+    #printArea h3{page-break-after:avoid}
+    table{font-size:11px}
+    @page{size:A4;margin:14mm}
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Manas College &mdash; Attendance</h1>
-  <p>Mark absentees and generate the daily course &amp; semester-wise report.</p>
+  <div>
+    <h1>Manas College &mdash; Attendance</h1>
+    <p id="whoami">Please sign in</p>
+  </div>
+  <button class="out hide" id="btnOut" onclick="logout()">Sign out</button>
 </header>
 
-<nav>
+<nav id="nav" class="hide">
   <button id="tabMark" class="on" onclick="show('mark')">Mark Attendance</button>
-  <button id="tabRep" onclick="show('rep')">Daily Report</button>
+  <button id="tabMine" onclick="show('mine')">My Submissions</button>
+  <button id="tabAdm"  onclick="show('adm')">Admin</button>
 </nav>
 
 <div class="wrap">
 
-  <div id="mark">
+  <!-- ============ LOGIN ============ -->
+  <div id="login">
+    <div id="lMsg" class="msg"></div>
+    <div class="card">
+      <div class="grid">
+        <div><label for="fName">Faculty Name</label><select id="fName"></select></div>
+        <div><label for="fPin">Passcode</label>
+             <input type="password" id="fPin" inputmode="numeric" placeholder="4-digit code"></div>
+      </div>
+      <div class="bar"><button class="btn" id="btnIn" onclick="login()">Sign in</button></div>
+      <p class="mut" style="margin:12px 0 0">Not in the list? Ask the administrator to add you to the Faculty sheet.</p>
+    </div>
+  </div>
+
+  <!-- ============ MARK ============ -->
+  <div id="mark" class="hide">
     <div id="mMsg" class="msg"></div>
     <div class="card">
       <div class="grid">
-        <div><label for="faculty">Faculty Name</label><input type="text" id="faculty" placeholder="Type your name"></div>
         <div><label for="course">Course / Department</label><select id="course"></select></div>
         <div><label for="sem">Semester</label><select id="sem"></select></div>
         <div><label for="date">Date</label><input type="date" id="date"></div>
-        <div><label for="subject">Subject / Period <span class="mut">(optional)</span></label><input type="text" id="subject" placeholder="e.g. DBMS / 2nd period"></div>
+        <div><label for="subject">Subject / Period <span class="mut">(optional)</span></label>
+             <input type="text" id="subject" placeholder="e.g. DBMS / 2nd period"></div>
       </div>
     </div>
     <div class="card">
@@ -86,46 +123,80 @@
     </div>
   </div>
 
-  <div id="rep" class="hide">
-    <div id="rMsg" class="msg"></div>
+  <!-- ============ MY SUBMISSIONS ============ -->
+  <div id="mine" class="hide">
+    <div id="nMsg" class="msg"></div>
     <div class="card">
       <div class="grid">
-        <div><label for="rDate">Report Date</label><input type="date" id="rDate"></div>
-        <div style="align-self:end"><button class="btn" onclick="loadReport()">Generate Report</button></div>
+        <div><label for="nDate">Date</label><input type="date" id="nDate"></div>
+        <div style="align-self:end"><button class="btn" onclick="loadMine()">Show my submissions</button></div>
+      </div>
+      <p class="mut" style="margin:12px 0 0">You can only see classes submitted under your own name.</p>
+    </div>
+    <div id="nOut"></div>
+  </div>
+
+  <!-- ============ ADMIN ============ -->
+  <div id="adm" class="hide">
+    <div id="aMsg" class="msg"></div>
+
+    <div class="card" id="aLock">
+      <div class="grid">
+        <div><label for="aPin">Admin Passcode</label>
+             <input type="password" id="aPin" inputmode="numeric" placeholder="Admin code"></div>
+        <div style="align-self:end"><button class="btn" onclick="unlock()">Unlock reports</button></div>
       </div>
     </div>
-    <div class="card" id="rOut" style="display:none">
-      <pre id="rText"></pre>
-      <div class="bar">
-        <button class="btn wa" onclick="waShare()">Send on WhatsApp</button>
-        <button class="btn ghost" onclick="copyText()">Copy text</button>
-        <button class="btn ghost" onclick="dl('txt')">Download .txt</button>
-        <button class="btn ghost" onclick="dl('doc')">Download .doc</button>
+
+    <div id="aBody" class="hide">
+      <div class="card">
+        <div class="grid">
+          <div><label for="aDate">Report Date</label><input type="date" id="aDate"></div>
+          <div style="align-self:end"><button class="btn" onclick="loadAdmin()">Load day</button></div>
+        </div>
       </div>
-      <div id="dlMsg" class="msg" style="margin-top:12px"></div>
+
+      <div class="card" id="aParent" style="display:none">
+        <h3 style="margin-top:0">Parents' message (semester-wise)</h3>
+        <div class="grid">
+          <div><label for="pSem">Semester / WhatsApp group</label><select id="pSem" onchange="buildParent()"></select></div>
+        </div>
+        <pre id="pText"></pre>
+        <div class="bar">
+          <button class="btn wa" onclick="waShare()">Send on WhatsApp</button>
+          <button class="btn ghost" onclick="copyParent()">Copy text</button>
+          <button class="btn ghost" onclick="dlTxt()">Download .txt</button>
+        </div>
+        <div id="pMsg" class="msg" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card" id="aDetail" style="display:none">
+        <h3 style="margin-top:0">Detailed attendance summary</h3>
+        <div id="dHtml"></div>
+        <div class="bar">
+          <button class="btn" onclick="savePdf()">Save as PDF</button>
+        </div>
+        <p class="mut" style="margin:10px 0 0">In the print dialog choose <b>Destination &rarr; Save as PDF</b>.</p>
+      </div>
     </div>
   </div>
 
 </div>
 
+<div id="printArea"></div>
+
 <script>
 /* ===== CONFIG ===== */
 var API = "https://script.google.com/macros/s/AKfycbwC-lcFtK6CajrYS0eZIgcpd0kDz378rPAt6Vy0u7kFGOMLBUzwkfOIgfRZrR99Vgd1/exec";
 
-var STUDENTS = [], rows = [], reportText = "";
+var STUDENTS = [], rows = [], COLLEGE = "Manas College";
+var ME = { name:"", pin:"" }, ADMIN_PIN = "", admRows = [], parentText = "";
 function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
-/* credentials:"omit" is the important bit - it strips the Google
-   session so the request is always anonymous, whatever account the
-   phone is signed into. */
-function apiGet(params){
-  var q = Object.keys(params).map(function(k){
-    return k + "=" + encodeURIComponent(params[k]); }).join("&");
-  return fetch(API + "?" + q, { method:"GET", credentials:"omit", redirect:"follow" })
-    .then(function(r){ return r.json(); })
-    .then(function(j){ if(!j.ok) throw new Error(j.error); return j; });
-}
-function apiPost(body){
+/* credentials:"omit" strips the Google session so the call is always
+   anonymous - that is what makes this work on any phone. */
+function api(body){
   return fetch(API, { method:"POST", credentials:"omit", redirect:"follow",
       headers:{ "Content-Type":"text/plain;charset=utf-8" },
       body: JSON.stringify(body) })
@@ -133,30 +204,72 @@ function apiPost(body){
     .then(function(j){ if(!j.ok) throw new Error(j.error); return j; });
 }
 
-function show(which){
-  $('mark').className = which === 'mark' ? '' : 'hide';
-  $('rep').className  = which === 'rep'  ? '' : 'hide';
-  $('tabMark').className = which === 'mark' ? 'on' : '';
-  $('tabRep').className  = which === 'rep'  ? 'on' : '';
-}
 function say(el, text, kind){ el.className = 'msg ' + kind; el.innerHTML = text; }
 function today(){
   var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
 }
-function pretty(iso){ if(!iso) return ''; var a = iso.split('-'); return a[2]+'-'+a[1]+'-'+a[0]; }
+function pretty(iso){ if(!iso) return ''; var a = String(iso).split('-'); return a[2]+'-'+a[1]+'-'+a[0]; }
+function pct(p, t){ return t ? (p / t * 100).toFixed(1) + '%' : '-'; }
 
-/* ---------- boot ---------- */
-$('date').value  = today();
-$('rDate').value = today();
-$('faculty').value = localStorage.getItem('mc_faculty') || '';
-$('faculty').addEventListener('input', function(){ localStorage.setItem('mc_faculty', this.value); });
+function show(which){
+  ['mark','mine','adm'].forEach(function(id){
+    $(id).className = (id === which) ? '' : 'hide';
+  });
+  $('tabMark').className = which === 'mark' ? 'on' : '';
+  $('tabMine').className = which === 'mine' ? 'on' : '';
+  $('tabAdm').className  = which === 'adm'  ? 'on' : '';
+}
 
-say($('mMsg'), 'Loading student list&hellip;', 'info');
-apiGet({ action:'students' })
-  .then(function(j){ onStudents(j.students); })
-  .catch(function(e){ say($('mMsg'), 'Could not load students: ' + e.message, 'err'); });
+/* ---------- login ---------- */
+['date','nDate','aDate'].forEach(function(id){ $(id).value = today(); });
 
+say($('lMsg'), 'Loading faculty list&hellip;', 'info');
+api({ action:'faculty' })
+  .then(function(j){
+    COLLEGE = j.college || COLLEGE;
+    $('fName').innerHTML = (j.faculty || []).map(function(n){
+      return '<option>' + esc(n) + '</option>'; }).join('');
+    var last = localStorage.getItem('mc_fac');
+    if (last) $('fName').value = last;
+    $('lMsg').className = 'msg';
+  })
+  .catch(function(e){ say($('lMsg'), 'Could not reach the server: ' + e.message, 'err'); });
+
+$('fPin').addEventListener('keydown', function(ev){ if (ev.key === 'Enter') login(); });
+
+function login(){
+  var name = $('fName').value, pin = $('fPin').value.trim();
+  if (!name || !pin){ say($('lMsg'), 'Choose your name and enter your passcode.', 'err'); return; }
+  $('btnIn').disabled = true;
+  say($('lMsg'), 'Checking&hellip;', 'info');
+  api({ action:'students', faculty:name, pin:pin })
+    .then(function(j){
+      ME = { name:name, pin:pin };
+      localStorage.setItem('mc_fac', name);
+      $('btnIn').disabled = false;
+      $('login').className = 'hide';
+      $('nav').className = '';
+      $('btnOut').className = 'out';
+      $('whoami').textContent = 'Signed in as ' + name;
+      onStudents(j.students);
+      show('mark');
+    })
+    .catch(function(e){ $('btnIn').disabled = false; say($('lMsg'), e.message, 'err'); });
+}
+
+function logout(){
+  ME = { name:"", pin:"" }; ADMIN_PIN = ""; admRows = [];
+  $('fPin').value = ''; $('aPin').value = '';
+  $('aLock').className = 'card'; $('aBody').className = 'hide';
+  $('nav').className = 'hide'; $('btnOut').className = 'out hide';
+  ['mark','mine','adm'].forEach(function(id){ $(id).className = 'hide'; });
+  $('login').className = '';
+  $('whoami').textContent = 'Please sign in';
+  $('lMsg').className = 'msg';
+}
+
+/* ---------- marking ---------- */
 function onStudents(list){
   STUDENTS = list || [];
   var courses = [], sems = [];
@@ -166,15 +279,12 @@ function onStudents(list){
   });
   courses.sort();
   sems.sort(function(a,b){ return (+a||0) - (+b||0); });
-  $('course').innerHTML = courses.map(function(c){ return '<option>'+c+'</option>'; }).join('');
-  $('sem').innerHTML    = sems.map(function(s){ return '<option value="'+s+'">Semester '+s+'</option>'; }).join('');
-  $('mMsg').className = 'msg';
+  $('course').innerHTML = courses.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+  $('sem').innerHTML    = sems.map(function(s){ return '<option value="'+esc(s)+'">Semester '+esc(s)+'</option>'; }).join('');
   $('course').onchange = load;
   $('sem').onchange    = load;
   load();
 }
-
-/* ---------- marking ---------- */
 function load(){
   var c = $('course').value, s = $('sem').value;
   rows = STUDENTS.filter(function(x){ return x.course === c && x.sem === s; })
@@ -189,7 +299,7 @@ function render(){
       var ab = r.status === 'Absent';
       return '<div class="row'+(ab?' absent':'')+'">'
            +   '<div class="no">'+(i+1)+'</div>'
-           +   '<div class="who"><b>'+r.name+'</b><span>'+r.roll+'</span></div>'
+           +   '<div class="who"><b>'+esc(r.name)+'</b><span>'+esc(r.roll)+'</span></div>'
            +   '<button class="tog '+(ab?'absent':'present')+'" onclick="flip('+i+')">'
            +      (ab ? 'Absent' : 'Present') + '</button>'
            + '</div>';
@@ -205,132 +315,240 @@ function stats(){
   $('sTot').textContent = rows.length;
   $('sPre').textContent = p;
   $('sAbs').textContent = a;
-  $('sPct').textContent = rows.length ? (p / rows.length * 100).toFixed(1) + '%' : '0%';
+  $('sPct').textContent = pct(p, rows.length);
 }
-
 function save(){
-  if (!$('faculty').value.trim()){ say($('mMsg'), 'Please enter your faculty name.', 'err'); return; }
   if (!rows.length){ say($('mMsg'), 'Nothing to submit.', 'err'); return; }
   $('save').disabled = true;
   say($('mMsg'), 'Submitting&hellip;', 'info');
-  apiPost({ date:$('date').value, faculty:$('faculty').value.trim(),
-            course:$('course').value, semester:$('sem').value,
-            subject:$('subject').value.trim(), records:rows })
+  api({ action:'save', faculty:ME.name, pin:ME.pin,
+        date:$('date').value, course:$('course').value, semester:$('sem').value,
+        subject:$('subject').value.trim(), records:rows })
     .then(function(j){
       $('save').disabled = false;
-      say($('mMsg'), '&#10003; Saved ' + j.saved + ' records for ' + $('course').value
-        + ' &mdash; Semester ' + $('sem').value + ' on ' + pretty($('date').value) + '.', 'ok');
+      say($('mMsg'), '&#10003; Saved ' + j.saved + ' records for ' + esc($('course').value)
+        + ' &mdash; Semester ' + esc($('sem').value) + ' on ' + pretty($('date').value) + '.', 'ok');
     })
-    .catch(function(e){
-      $('save').disabled = false;
-      say($('mMsg'), 'Save failed: ' + e.message, 'err');
-    });
+    .catch(function(e){ $('save').disabled = false; say($('mMsg'), 'Save failed: ' + e.message, 'err'); });
 }
 
-/* ---------- report ---------- */
-function loadReport(){
-  say($('rMsg'), 'Building report&hellip;', 'info');
-  $('rOut').style.display = 'none';
-  apiGet({ action:'report', date:$('rDate').value })
-    .then(function(j){ buildReport(j.rows); })
-    .catch(function(e){ say($('rMsg'), 'Failed: ' + e.message, 'err'); });
+/* ---------- my submissions ---------- */
+function loadMine(){
+  say($('nMsg'), 'Loading&hellip;', 'info');
+  $('nOut').innerHTML = '';
+  api({ action:'mine', faculty:ME.name, pin:ME.pin, date:$('nDate').value })
+    .then(function(j){
+      var g = groupClasses(j.rows);
+      if (!g.keys.length){
+        say($('nMsg'), 'You have not submitted anything for ' + pretty($('nDate').value) + '.', 'err');
+        return;
+      }
+      say($('nMsg'), '&#10003; ' + g.keys.length + ' class(es) submitted on ' + pretty($('nDate').value) + '.', 'ok');
+      $('nOut').innerHTML = g.keys.map(function(k){
+        var c = g.map[k];
+        return '<div class="card"><h3 style="margin-top:0">' + esc(c.course)
+          + ' &mdash; Semester ' + esc(c.sem) + (c.subject ? ' &mdash; ' + esc(c.subject) : '') + '</h3>'
+          + '<p class="mut">Strength ' + c.total + ' &nbsp;|&nbsp; Present ' + (c.total - c.abs.length)
+          + ' &nbsp;|&nbsp; Absent ' + c.abs.length + ' &nbsp;|&nbsp; ' + pct(c.total - c.abs.length, c.total) + '</p>'
+          + (c.abs.length
+              ? '<table><thead><tr><th>#</th><th>Roll No</th><th>Absent Student</th></tr></thead><tbody>'
+                + c.abs.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.roll)+'</td><td>'+esc(r.name)+'</td></tr>'; }).join('')
+                + '</tbody></table>'
+              : '<p class="mut">Full attendance &mdash; no absentees.</p>')
+          + '</div>';
+      }).join('');
+    })
+    .catch(function(e){ say($('nMsg'), e.message, 'err'); });
 }
 
-function buildReport(data){
-  if (!data || !data.length){
-    say($('rMsg'), 'No attendance submitted for ' + pretty($('rDate').value) + ' yet.', 'err');
+/* ---------- admin ---------- */
+$('aPin').addEventListener('keydown', function(ev){ if (ev.key === 'Enter') unlock(); });
+
+function unlock(){
+  var pin = $('aPin').value.trim();
+  if (!pin){ say($('aMsg'), 'Enter the admin passcode.', 'err'); return; }
+  say($('aMsg'), 'Checking&hellip;', 'info');
+  api({ action:'admin', adminPin:pin, date:$('aDate').value })
+    .then(function(j){
+      ADMIN_PIN = pin;
+      COLLEGE = j.college || COLLEGE;
+      $('aLock').className = 'card hide';
+      $('aBody').className = '';
+      $('aMsg').className = 'msg';
+      onAdmin(j.rows);
+    })
+    .catch(function(e){ say($('aMsg'), e.message, 'err'); });
+}
+
+function loadAdmin(){
+  say($('aMsg'), 'Loading&hellip;', 'info');
+  api({ action:'admin', adminPin:ADMIN_PIN, date:$('aDate').value })
+    .then(function(j){ $('aMsg').className = 'msg'; onAdmin(j.rows); })
+    .catch(function(e){ say($('aMsg'), e.message, 'err'); });
+}
+
+function onAdmin(data){
+  admRows = data || [];
+  if (!admRows.length){
+    $('aParent').style.display = 'none';
+    $('aDetail').style.display = 'none';
+    say($('aMsg'), 'No attendance submitted for ' + pretty($('aDate').value) + ' yet.', 'err');
     return;
   }
-  var groups = {};
-  data.forEach(function(r){
+  var sems = [];
+  admRows.forEach(function(r){ if (sems.indexOf(r.sem) < 0) sems.push(r.sem); });
+  sems.sort(function(a,b){ return (+a||0) - (+b||0); });
+  $('pSem').innerHTML = sems.map(function(s){
+    return '<option value="'+esc(s)+'">Semester '+esc(s)+'</option>'; }).join('');
+  $('aParent').style.display = 'block';
+  $('aDetail').style.display = 'block';
+  buildParent();
+  buildDetail();
+  say($('aMsg'), '&#10003; Loaded ' + admRows.length + ' records for ' + pretty($('aDate').value)
+    + ' across ' + sems.length + ' semester(s).', 'ok');
+}
+
+/* group into classes: course + sem + subject + faculty */
+function groupClasses(data){
+  var map = {}, keys = [];
+  (data || []).forEach(function(r){
     var k = r.course + '||' + r.sem + '||' + r.subject + '||' + r.faculty;
-    if (!groups[k]) groups[k] = { course:r.course, sem:r.sem, subject:r.subject,
-                                  faculty:r.faculty, total:0, abs:[] };
-    groups[k].total++;
-    if (r.status === 'Absent') groups[k].abs.push(r);
-  });
-  var keys = Object.keys(groups).sort(function(a,b){
-    var A = groups[a], B = groups[b];
-    return A.course === B.course ? (+A.sem || 0) - (+B.sem || 0) : A.course.localeCompare(B.course);
-  });
-
-  var L = [], gT = 0, gA = 0;
-  L.push('MANAS COLLEGE');
-  L.push('DAILY ABSENTEE REPORT');
-  L.push('Date: ' + pretty($('rDate').value));
-  L.push('====================================');
-  L.push('');
-
-  keys.forEach(function(k){
-    var g = groups[k];
-    gT += g.total; gA += g.abs.length;
-    L.push(g.course + '  |  SEMESTER ' + g.sem);
-    L.push('Faculty: ' + g.faculty + (g.subject ? '   |   Subject: ' + g.subject : ''));
-    L.push('Strength: ' + g.total + '   Present: ' + (g.total - g.abs.length) + '   Absent: ' + g.abs.length);
-    if (g.abs.length){
-      L.push('Absentees:');
-      g.abs.forEach(function(r, i){
-        L.push('  ' + (i+1) + '. ' + r.roll + ' - ' + r.name + (r.remarks ? '  (' + r.remarks + ')' : ''));
-      });
-    } else {
-      L.push('Absentees: NIL - full attendance');
+    if (!map[k]){
+      map[k] = { course:r.course, sem:r.sem, subject:r.subject, faculty:r.faculty, total:0, abs:[] };
+      keys.push(k);
     }
-    L.push('------------------------------------');
+    map[k].total++;
+    if (r.status === 'Absent') map[k].abs.push(r);
   });
-
-  L.push('');
-  L.push('OVERALL: ' + gT + ' marked | ' + (gT - gA) + ' present | ' + gA + ' absent'
-    + (gT ? '  (' + ((gT - gA) / gT * 100).toFixed(1) + '%)' : ''));
-  L.push('');
-  L.push('Parents are requested to note the above.');
-  L.push('- Manas College Administration');
-
-  reportText = L.join('\n');
-  $('rText').textContent = reportText;
-  $('rOut').style.display = 'block';
-  $('dlMsg').className = 'msg';
-  say($('rMsg'), '&#10003; Report ready for ' + pretty($('rDate').value)
-    + ' &mdash; ' + keys.length + ' class(es), ' + gA + ' absentee(s).', 'ok');
+  keys.sort(function(a,b){
+    var A = map[a], B = map[b];
+    if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
+    return A.course.localeCompare(B.course);
+  });
+  return { map:map, keys:keys };
 }
 
-function waShare(){
-  window.open('https://wa.me/?text=' + encodeURIComponent(reportText), '_blank');
+/* ---- parents' message: semester number, course name, absent names only ---- */
+function buildParent(){
+  var sem = $('pSem').value;
+  var sub = admRows.filter(function(r){ return r.sem === sem; });
+  var byCourse = {}, order = [];
+  sub.forEach(function(r){
+    if (!byCourse[r.course]){ byCourse[r.course] = []; order.push(r.course); }
+    if (r.status === 'Absent') byCourse[r.course].push(r.name);
+  });
+  order.sort();
+
+  var L = [];
+  L.push(COLLEGE.toUpperCase());
+  L.push('Semester ' + sem + ' - Absentees - ' + pretty($('aDate').value));
+  L.push('');
+  var any = false;
+  order.forEach(function(c){
+    L.push(c);
+    var names = byCourse[c];
+    if (names.length){
+      any = true;
+      names.forEach(function(n, i){ L.push('  ' + (i+1) + '. ' + n); });
+    } else {
+      L.push('  Nil');
+    }
+    L.push('');
+  });
+  if (!any) L.push('No absentees today.');
+  L.push('- ' + COLLEGE);
+
+  parentText = L.join('\n');
+  $('pText').textContent = parentText;
+  $('pMsg').className = 'msg';
 }
 
-function copyText(){
-  var done = function(){ say($('dlMsg'), '&#10003; Copied. Paste it into the parents\' group.', 'ok'); };
+function waShare(){ window.open('https://wa.me/?text=' + encodeURIComponent(parentText), '_blank'); }
+
+function copyParent(){
+  var done = function(){ say($('pMsg'), '&#10003; Copied. Paste into the Semester ' + $('pSem').value + ' parents\' group.', 'ok'); };
   if (navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(reportText).then(done).catch(fallback);
-  } else { fallback(); }
-  function fallback(){
+    navigator.clipboard.writeText(parentText).then(done).catch(fb);
+  } else { fb(); }
+  function fb(){
     var t = document.createElement('textarea');
-    t.value = reportText; document.body.appendChild(t); t.select();
+    t.value = parentText; document.body.appendChild(t); t.select();
     try { document.execCommand('copy'); done(); }
-    catch(e){ say($('dlMsg'), 'Copy blocked &mdash; select the text above and copy manually.', 'err'); }
+    catch(e){ say($('pMsg'), 'Copy blocked &mdash; select the text above and copy manually.', 'err'); }
     document.body.removeChild(t);
   }
 }
 
-function dl(kind){
-  var name = 'Manas_Absentee_Report_' + $('rDate').value, blob, fn;
-  if (kind === 'doc'){
-    var html = '<html><head><meta charset="utf-8"></head>'
-      + '<body style="font-family:Calibri,Arial,sans-serif;font-size:11pt">'
-      + '<pre style="font-family:Calibri,Arial,sans-serif;font-size:11pt;white-space:pre-wrap">'
-      + reportText.replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      + '</pre></body></html>';
-    blob = new Blob(['\ufeff' + html], { type:'application/msword' });
-    fn = name + '.doc';
-  } else {
-    blob = new Blob([reportText], { type:'text/plain;charset=utf-8' });
-    fn = name + '.txt';
-  }
+function dlTxt(){
+  var fn = 'Semester' + $('pSem').value + '_Absentees_' + $('aDate').value + '.txt';
   var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([parentText], { type:'text/plain;charset=utf-8' }));
   a.download = fn;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  say($('dlMsg'), '&#10003; ' + fn + ' downloaded. Check your Downloads folder.', 'ok');
+  say($('pMsg'), '&#10003; ' + fn + ' downloaded.', 'ok');
 }
+
+/* ---- detailed admin summary ---- */
+function buildDetail(){
+  var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [];
+  var gT = 0, gA = 0;
+  admRows.forEach(function(r){
+    if (!semAgg[r.sem]){ semAgg[r.sem] = { t:0, a:0 }; semOrder.push(r.sem); }
+    semAgg[r.sem].t++; if (r.status === 'Absent') semAgg[r.sem].a++;
+    var k = r.sem + '||' + r.course;
+    if (!csAgg[k]){ csAgg[k] = { sem:r.sem, course:r.course, t:0, a:0 }; csOrder.push(k); }
+    csAgg[k].t++; if (r.status === 'Absent') csAgg[k].a++;
+    gT++; if (r.status === 'Absent') gA++;
+  });
+  semOrder.sort(function(a,b){ return (+a||0) - (+b||0); });
+  csOrder.sort(function(a,b){
+    var A = csAgg[a], B = csAgg[b];
+    if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
+    return A.course.localeCompare(B.course);
+  });
+
+  var h = [];
+  h.push('<h3>Semester-wise summary</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th class="n">Marked</th><th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
+  semOrder.forEach(function(s){
+    var d = semAgg[s];
+    h.push('<tr><td>Semester '+esc(s)+'</td><td class="n">'+d.t+'</td><td class="n">'+(d.t-d.a)
+      +'</td><td class="n">'+d.a+'</td><td class="n">'+pct(d.t-d.a, d.t)+'</td></tr>');
+  });
+  h.push('<tr class="tot"><td>College total</td><td class="n">'+gT+'</td><td class="n">'+(gT-gA)
+    +'</td><td class="n">'+gA+'</td><td class="n">'+pct(gT-gA, gT)+'</td></tr>');
+  h.push('</tbody></table>');
+
+  h.push('<h3>Course-wise summary</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th>Course / Department</th><th class="n">Marked</th><th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
+  csOrder.forEach(function(k){
+    var d = csAgg[k];
+    h.push('<tr><td>Sem '+esc(d.sem)+'</td><td>'+esc(d.course)+'</td><td class="n">'+d.t+'</td><td class="n">'
+      +(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'+pct(d.t-d.a, d.t)+'</td></tr>');
+  });
+  h.push('</tbody></table>');
+
+  var g = groupClasses(admRows);
+  h.push('<h3>Class-wise detail</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th>Course</th><th>Faculty</th><th>Subject</th><th class="n">Str.</th><th class="n">Abs.</th><th>Absentees</th></tr></thead><tbody>');
+  g.keys.forEach(function(k){
+    var c = g.map[k];
+    var names = c.abs.map(function(r){ return r.roll + ' ' + r.name; }).join(', ') || 'Nil';
+    h.push('<tr><td>Sem '+esc(c.sem)+'</td><td>'+esc(c.course)+'</td><td>'+esc(c.faculty)+'</td><td>'
+      +esc(c.subject || '-')+'</td><td class="n">'+c.total+'</td><td class="n">'+c.abs.length
+      +'</td><td>'+esc(names)+'</td></tr>');
+  });
+  h.push('</tbody></table>');
+
+  var body = h.join('');
+  $('dHtml').innerHTML = body;
+  $('printArea').innerHTML =
+      '<h1>' + esc(COLLEGE) + ' &mdash; Daily Attendance Report</h1>'
+    + '<div class="sub">Date: ' + pretty($('aDate').value)
+    + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
+}
+
+function savePdf(){ window.print(); }
 </script>
 </body>
 </html>
