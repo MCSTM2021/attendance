@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manas College — Attendance</title>
+<style>
+  :root{--navy:#1f3864;--line:#dde1e8}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#f4f6fa;color:#222;font-size:15px}
+  header{background:var(--navy);color:#fff;padding:14px 18px}
+  header h1{margin:0;font-size:17px}
+  header p{margin:3px 0 0;font-size:12px;opacity:.8}
+  nav{display:flex;background:#16294a;position:sticky;top:0;z-index:5}
+  nav button{flex:1;background:none;border:0;color:#cfd8e8;padding:13px 8px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent}
+  nav button.on{color:#fff;border-bottom-color:#ffc000;font-weight:600}
+  .wrap{max-width:900px;margin:0 auto;padding:16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#667;margin-bottom:5px}
+  input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:15px;font-family:inherit;background:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:15px;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+  .btn.wa{background:#25d366}
+  .btn:disabled{opacity:.5;cursor:default}
+  .bar{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .stats{display:flex;gap:22px;flex-wrap:wrap;font-size:11px;color:#667;text-transform:uppercase;letter-spacing:.04em}
+  .stats b{display:block;font-size:21px;color:var(--navy);letter-spacing:0}
+  .row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #eef0f4}
+  .row .no{width:26px;color:#99a;font-size:13px}
+  .row .who{flex:1;min-width:0}
+  .row .who span{display:block;font-size:12px;color:#889}
+  .row.absent{background:#fff5f6}
+  .tog{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 15px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .tog.absent{background:#ffc7ce;border-color:#e08b97;color:#9c0006;font-weight:700}
+  .tog.present{background:#c6efce;border-color:#86cf9b;color:#006100;font-weight:700}
+  .msg{padding:11px 13px;border-radius:6px;margin-bottom:12px;font-size:14px;display:none}
+  .msg.ok{background:#e7f6ea;color:#145c28;border:1px solid #a9d9b6;display:block}
+  .msg.err{background:#fdeaea;color:#8b1a1a;border:1px solid #e9b4b4;display:block}
+  .msg.info{background:#eaf1fb;color:#1b3d70;border:1px solid #b6cbe9;display:block}
+  pre{background:#fbfcfd;border:1px solid var(--line);border-radius:6px;padding:13px;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;font-size:13px;max-height:420px;overflow:auto}
+  .hide{display:none}
+  .mut{color:#889;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Manas College &mdash; Attendance</h1>
+  <p>Mark absentees and generate the daily course &amp; semester-wise report.</p>
+</header>
+
+<nav>
+  <button id="tabMark" class="on" onclick="show('mark')">Mark Attendance</button>
+  <button id="tabRep" onclick="show('rep')">Daily Report</button>
+</nav>
+
+<div class="wrap">
+
+  <div id="mark">
+    <div id="mMsg" class="msg"></div>
+    <div class="card">
+      <div class="grid">
+        <div><label for="faculty">Faculty Name</label><input type="text" id="faculty" placeholder="Type your name"></div>
+        <div><label for="course">Course / Department</label><select id="course"></select></div>
+        <div><label for="sem">Semester</label><select id="sem"></select></div>
+        <div><label for="date">Date</label><input type="date" id="date"></div>
+        <div><label for="subject">Subject / Period <span class="mut">(optional)</span></label><input type="text" id="subject" placeholder="e.g. DBMS / 2nd period"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stats">
+        <div>Strength <b id="sTot">0</b></div>
+        <div>Present <b id="sPre">0</b></div>
+        <div>Absent <b id="sAbs">0</b></div>
+        <div>Attendance <b id="sPct">0%</b></div>
+      </div>
+      <div class="bar">
+        <button class="btn" id="save" onclick="save()">Submit Attendance</button>
+        <button class="btn ghost" onclick="allPresent()">Reset all to Present</button>
+      </div>
+    </div>
+    <div class="card">
+      <p class="mut" style="margin:0 0 6px">Everyone starts as <b>Present</b> &mdash; tap only the students who are absent.</p>
+      <div id="list"></div>
+    </div>
+  </div>
+
+  <div id="rep" class="hide">
+    <div id="rMsg" class="msg"></div>
+    <div class="card">
+      <div class="grid">
+        <div><label for="rDate">Report Date</label><input type="date" id="rDate"></div>
+        <div style="align-self:end"><button class="btn" onclick="loadReport()">Generate Report</button></div>
+      </div>
+    </div>
+    <div class="card" id="rOut" style="display:none">
+      <pre id="rText"></pre>
+      <div class="bar">
+        <button class="btn wa" onclick="waShare()">Send on WhatsApp</button>
+        <button class="btn ghost" onclick="copyText()">Copy text</button>
+        <button class="btn ghost" onclick="dl('txt')">Download .txt</button>
+        <button class="btn ghost" onclick="dl('doc')">Download .doc</button>
+      </div>
+      <div id="dlMsg" class="msg" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+var API = "https://script.google.com/macros/s/AKfycbwC-lcFtK6CajrYS0eZIgcpd0kDz378rPAt6Vy0u7kFGOMLBUzwkfOIgfRZrR99Vgd1/exec";
+
+var STUDENTS = [], rows = [], reportText = "";
+function $(id){ return document.getElementById(id); }
+
+/* credentials:"omit" is the important bit - it strips the Google
+   session so the request is always anonymous, whatever account the
+   phone is signed into. */
+function apiGet(params){
+  var q = Object.keys(params).map(function(k){
+    return k + "=" + encodeURIComponent(params[k]); }).join("&");
+  return fetch(API + "?" + q, { method:"GET", credentials:"omit", redirect:"follow" })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(!j.ok) throw new Error(j.error); return j; });
+}
+function apiPost(body){
+  return fetch(API, { method:"POST", credentials:"omit", redirect:"follow",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(!j.ok) throw new Error(j.error); return j; });
+}
+
+function show(which){
+  $('mark').className = which === 'mark' ? '' : 'hide';
+  $('rep').className  = which === 'rep'  ? '' : 'hide';
+  $('tabMark').className = which === 'mark' ? 'on' : '';
+  $('tabRep').className  = which === 'rep'  ? 'on' : '';
+}
+function say(el, text, kind){ el.className = 'msg ' + kind; el.innerHTML = text; }
+function today(){
+  var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
+function pretty(iso){ if(!iso) return ''; var a = iso.split('-'); return a[2]+'-'+a[1]+'-'+a[0]; }
+
+/* ---------- boot ---------- */
+$('date').value  = today();
+$('rDate').value = today();
+$('faculty').value = localStorage.getItem('mc_faculty') || '';
+$('faculty').addEventListener('input', function(){ localStorage.setItem('mc_faculty', this.value); });
+
+say($('mMsg'), 'Loading student list&hellip;', 'info');
+apiGet({ action:'students' })
+  .then(function(j){ onStudents(j.students); })
+  .catch(function(e){ say($('mMsg'), 'Could not load students: ' + e.message, 'err'); });
+
+function onStudents(list){
+  STUDENTS = list || [];
+  var courses = [], sems = [];
+  STUDENTS.forEach(function(s){
+    if (s.course && courses.indexOf(s.course) < 0) courses.push(s.course);
+    if (s.sem    && sems.indexOf(s.sem)       < 0) sems.push(s.sem);
+  });
+  courses.sort();
+  sems.sort(function(a,b){ return (+a||0) - (+b||0); });
+  $('course').innerHTML = courses.map(function(c){ return '<option>'+c+'</option>'; }).join('');
+  $('sem').innerHTML    = sems.map(function(s){ return '<option value="'+s+'">Semester '+s+'</option>'; }).join('');
+  $('mMsg').className = 'msg';
+  $('course').onchange = load;
+  $('sem').onchange    = load;
+  load();
+}
+
+/* ---------- marking ---------- */
+function load(){
+  var c = $('course').value, s = $('sem').value;
+  rows = STUDENTS.filter(function(x){ return x.course === c && x.sem === s; })
+                 .map(function(x){ return { roll:x.roll, name:x.name, status:'Present', remarks:'' }; });
+  render();
+}
+function render(){
+  if (!rows.length){
+    $('list').innerHTML = '<p class="mut">No students found for this course and semester.</p>';
+  } else {
+    $('list').innerHTML = rows.map(function(r,i){
+      var ab = r.status === 'Absent';
+      return '<div class="row'+(ab?' absent':'')+'">'
+           +   '<div class="no">'+(i+1)+'</div>'
+           +   '<div class="who"><b>'+r.name+'</b><span>'+r.roll+'</span></div>'
+           +   '<button class="tog '+(ab?'absent':'present')+'" onclick="flip('+i+')">'
+           +      (ab ? 'Absent' : 'Present') + '</button>'
+           + '</div>';
+    }).join('');
+  }
+  stats();
+}
+function flip(i){ rows[i].status = rows[i].status === 'Absent' ? 'Present' : 'Absent'; render(); }
+function allPresent(){ rows.forEach(function(r){ r.status = 'Present'; }); render(); }
+function stats(){
+  var a = rows.filter(function(r){ return r.status === 'Absent'; }).length;
+  var p = rows.length - a;
+  $('sTot').textContent = rows.length;
+  $('sPre').textContent = p;
+  $('sAbs').textContent = a;
+  $('sPct').textContent = rows.length ? (p / rows.length * 100).toFixed(1) + '%' : '0%';
+}
+
+function save(){
+  if (!$('faculty').value.trim()){ say($('mMsg'), 'Please enter your faculty name.', 'err'); return; }
+  if (!rows.length){ say($('mMsg'), 'Nothing to submit.', 'err'); return; }
+  $('save').disabled = true;
+  say($('mMsg'), 'Submitting&hellip;', 'info');
+  apiPost({ date:$('date').value, faculty:$('faculty').value.trim(),
+            course:$('course').value, semester:$('sem').value,
+            subject:$('subject').value.trim(), records:rows })
+    .then(function(j){
+      $('save').disabled = false;
+      say($('mMsg'), '&#10003; Saved ' + j.saved + ' records for ' + $('course').value
+        + ' &mdash; Semester ' + $('sem').value + ' on ' + pretty($('date').value) + '.', 'ok');
+    })
+    .catch(function(e){
+      $('save').disabled = false;
+      say($('mMsg'), 'Save failed: ' + e.message, 'err');
+    });
+}
+
+/* ---------- report ---------- */
+function loadReport(){
+  say($('rMsg'), 'Building report&hellip;', 'info');
+  $('rOut').style.display = 'none';
+  apiGet({ action:'report', date:$('rDate').value })
+    .then(function(j){ buildReport(j.rows); })
+    .catch(function(e){ say($('rMsg'), 'Failed: ' + e.message, 'err'); });
+}
+
+function buildReport(data){
+  if (!data || !data.length){
+    say($('rMsg'), 'No attendance submitted for ' + pretty($('rDate').value) + ' yet.', 'err');
+    return;
+  }
+  var groups = {};
+  data.forEach(function(r){
+    var k = r.course + '||' + r.sem + '||' + r.subject + '||' + r.faculty;
+    if (!groups[k]) groups[k] = { course:r.course, sem:r.sem, subject:r.subject,
+                                  faculty:r.faculty, total:0, abs:[] };
+    groups[k].total++;
+    if (r.status === 'Absent') groups[k].abs.push(r);
+  });
+  var keys = Object.keys(groups).sort(function(a,b){
+    var A = groups[a], B = groups[b];
+    return A.course === B.course ? (+A.sem || 0) - (+B.sem || 0) : A.course.localeCompare(B.course);
+  });
+
+  var L = [], gT = 0, gA = 0;
+  L.push('MANAS COLLEGE');
+  L.push('DAILY ABSENTEE REPORT');
+  L.push('Date: ' + pretty($('rDate').value));
+  L.push('====================================');
+  L.push('');
+
+  keys.forEach(function(k){
+    var g = groups[k];
+    gT += g.total; gA += g.abs.length;
+    L.push(g.course + '  |  SEMESTER ' + g.sem);
+    L.push('Faculty: ' + g.faculty + (g.subject ? '   |   Subject: ' + g.subject : ''));
+    L.push('Strength: ' + g.total + '   Present: ' + (g.total - g.abs.length) + '   Absent: ' + g.abs.length);
+    if (g.abs.length){
+      L.push('Absentees:');
+      g.abs.forEach(function(r, i){
+        L.push('  ' + (i+1) + '. ' + r.roll + ' - ' + r.name + (r.remarks ? '  (' + r.remarks + ')' : ''));
+      });
+    } else {
+      L.push('Absentees: NIL - full attendance');
+    }
+    L.push('------------------------------------');
+  });
+
+  L.push('');
+  L.push('OVERALL: ' + gT + ' marked | ' + (gT - gA) + ' present | ' + gA + ' absent'
+    + (gT ? '  (' + ((gT - gA) / gT * 100).toFixed(1) + '%)' : ''));
+  L.push('');
+  L.push('Parents are requested to note the above.');
+  L.push('- Manas College Administration');
+
+  reportText = L.join('\n');
+  $('rText').textContent = reportText;
+  $('rOut').style.display = 'block';
+  $('dlMsg').className = 'msg';
+  say($('rMsg'), '&#10003; Report ready for ' + pretty($('rDate').value)
+    + ' &mdash; ' + keys.length + ' class(es), ' + gA + ' absentee(s).', 'ok');
+}
+
+function waShare(){
+  window.open('https://wa.me/?text=' + encodeURIComponent(reportText), '_blank');
+}
+
+function copyText(){
+  var done = function(){ say($('dlMsg'), '&#10003; Copied. Paste it into the parents\' group.', 'ok'); };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(reportText).then(done).catch(fallback);
+  } else { fallback(); }
+  function fallback(){
+    var t = document.createElement('textarea');
+    t.value = reportText; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); done(); }
+    catch(e){ say($('dlMsg'), 'Copy blocked &mdash; select the text above and copy manually.', 'err'); }
+    document.body.removeChild(t);
+  }
+}
+
+function dl(kind){
+  var name = 'Manas_Absentee_Report_' + $('rDate').value, blob, fn;
+  if (kind === 'doc'){
+    var html = '<html><head><meta charset="utf-8"></head>'
+      + '<body style="font-family:Calibri,Arial,sans-serif;font-size:11pt">'
+      + '<pre style="font-family:Calibri,Arial,sans-serif;font-size:11pt;white-space:pre-wrap">'
+      + reportText.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      + '</pre></body></html>';
+    blob = new Blob(['\ufeff' + html], { type:'application/msword' });
+    fn = name + '.doc';
+  } else {
+    blob = new Blob([reportText], { type:'text/plain;charset=utf-8' });
+    fn = name + '.txt';
+  }
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fn;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  say($('dlMsg'), '&#10003; ' + fn + ' downloaded. Check your Downloads folder.', 'ok');
+}
+</script>
+</body>
+</html>
