@@ -45,7 +45,9 @@
   table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
   th,td{padding:7px 9px;border:1px solid #cfd5e0;text-align:left}
   th{background:#eef2f8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#445}
-  td.n,th.n{text-align:right}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  table.fixed{table-layout:fixed}
+  th{white-space:nowrap}
   td.ts{white-space:nowrap;font-family:Consolas,monospace;font-size:12px;color:#445}
   .fac{display:block;font-size:11px;font-weight:400;color:#667;margin-top:1px}
   td.names{font-size:12px}
@@ -67,6 +69,8 @@
     #printArea h4{font-size:10px;margin:7px 0 1px;page-break-after:avoid}
     table{font-size:8.5px;margin-top:3px}
     th,td{padding:2.5px 4px}
+    th{white-space:nowrap}
+    td.n{white-space:nowrap}
     th{background:#eef2f8 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     thead{display:table-header-group}
     tr{page-break-inside:avoid}
@@ -549,27 +553,29 @@ function dlTxt(){
 
 /* ---- daily detailed summary: one A4-portrait report ---- */
 function buildDetail(){
-  var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [], gT = 0, gA = 0;
+  var semAgg = {}, depAgg = {}, semOrder = [], depOrder = [], gT = 0, gA = 0;
   admRows.forEach(function(r){
     if (!semAgg[r.sem]){ semAgg[r.sem] = { t:0, a:0 }; semOrder.push(r.sem); }
     semAgg[r.sem].t++; if (r.status === 'Absent') semAgg[r.sem].a++;
-    var k = r.sem + '||' + r.course;
-    if (!csAgg[k]){ csAgg[k] = { sem:r.sem, course:r.course, t:0, a:0 }; csOrder.push(k); }
-    csAgg[k].t++; if (r.status === 'Absent') csAgg[k].a++;
+
+    /* department = course only, all semesters pooled */
+    if (!depAgg[r.course]){ depAgg[r.course] = { t:0, a:0, sems:{} }; depOrder.push(r.course); }
+    depAgg[r.course].t++;
+    depAgg[r.course].sems[r.sem] = true;
+    if (r.status === 'Absent') depAgg[r.course].a++;
+
     gT++; if (r.status === 'Absent') gA++;
   });
   semOrder.sort(function(a,b){ return (+a||0) - (+b||0); });
-  csOrder.sort(function(a,b){
-    var A = csAgg[a], B = csAgg[b];
-    if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
-    return A.course.localeCompare(B.course);
-  });
+  depOrder.sort();
 
   var h = [];
 
   /* 1. semester-wise */
   h.push('<h3>1. Semester-wise summary</h3>');
-  h.push('<table><thead><tr><th>Semester</th><th class="n">Strength</th><th class="n">Present</th>'
+  h.push('<table class="fixed"><colgroup><col style="width:28%"><col style="width:18%">'
+       + '<col style="width:18%"><col style="width:18%"><col style="width:18%"></colgroup>');
+  h.push('<thead><tr><th>Semester</th><th class="n">Strength</th><th class="n">Present</th>'
        + '<th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
   semOrder.forEach(function(s){
     var d = semAgg[s];
@@ -580,30 +586,38 @@ function buildDetail(){
     +'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
-  /* 2. course-wise */
-  h.push('<h3>2. Course-wise summary</h3>');
-  h.push('<table><thead><tr><th>Semester</th><th>Course / Department</th><th class="n">Strength</th>'
+  /* 2. department-wise (course only, semesters pooled) */
+  h.push('<h3>2. Department-wise summary</h3>');
+  h.push('<table class="fixed"><colgroup><col style="width:40%"><col style="width:12%">'
+       + '<col style="width:12%"><col style="width:12%"><col style="width:12%">'
+       + '<col style="width:12%"></colgroup>');
+  h.push('<thead><tr><th>Department / Course</th><th class="n">Semesters</th><th class="n">Strength</th>'
        + '<th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
-  csOrder.forEach(function(k){
-    var d = csAgg[k];
-    h.push('<tr><td>Sem '+esc(d.sem)+'</td><td>'+esc(d.course)+'</td><td class="n">'+d.t
+  depOrder.forEach(function(c){
+    var d = depAgg[c];
+    var nSem = Object.keys(d.sems).length;
+    h.push('<tr><td>'+esc(c)+'</td><td class="n">'+nSem+'</td><td class="n">'+d.t
       +'</td><td class="n">'+(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'
       +pctTxt(d.t-d.a, d.t)+'</td></tr>');
   });
-  h.push('<tr class="tot"><td colspan="2">College total</td><td class="n">'+gT+'</td><td class="n">'
-    +(gT-gA)+'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
+  h.push('<tr class="tot"><td>College total</td><td class="n">'+semOrder.length+'</td><td class="n">'+gT
+    +'</td><td class="n">'+(gT-gA)+'</td><td class="n">'+gA+'</td><td class="n">'
+    +pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
-  /* 3. class-wise detail - no Subject, no Marked At, Present added, faculty in small text */
+  /* 3. class-wise detail */
   var g = groupClasses(admRows);
   h.push('<h3>3. Class-wise detail</h3>');
-  h.push('<table><thead><tr><th>Sem</th><th>Course / Faculty</th><th class="n">Str.</th>'
-       + '<th class="n">Present</th><th class="n">Absent</th><th class="n">%</th>'
+  h.push('<table class="fixed"><colgroup><col style="width:5%"><col style="width:23%">'
+       + '<col style="width:6%"><col style="width:7%"><col style="width:6%">'
+       + '<col style="width:7%"><col style="width:46%"></colgroup>');
+  h.push('<thead><tr><th>Sem</th><th>Course / Faculty</th><th class="n">Str.</th>'
+       + '<th class="n">Pres.</th><th class="n">Abs.</th><th class="n">%</th>'
        + '<th>Absentees (Roll No &ndash; Name)</th></tr></thead><tbody>');
   g.keys.forEach(function(k){
     var c = g.map[k];
     var names = c.abs.map(function(r){ return r.roll + ' - ' + r.name; }).join(', ') || 'Nil';
-    h.push('<tr><td>'+esc(c.sem)+'</td>'
+    h.push('<tr><td class="n">'+esc(c.sem)+'</td>'
       + '<td>'+esc(c.course)+'<span class="fac">Faculty: '+esc(c.faculty)
       +   (c.overridden ? ' (overrode an earlier entry)' : '')+'</span></td>'
       + '<td class="n">'+c.total+'</td>'
@@ -621,7 +635,6 @@ function buildDetail(){
     + ' &nbsp;|&nbsp; Classes marked: ' + g.keys.length
     + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
 }
-
 /* ---- monthly / period report ---- */
 function loadMonthly(){
   var f = $('mFrom').value, t = $('mTo').value;
