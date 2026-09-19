@@ -20,10 +20,10 @@
   label{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#667;margin-bottom:5px}
   input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:15px;font-family:inherit;background:#fff}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .grid .wide{grid-column:1 / -1}
   .btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:15px;cursor:pointer}
   .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
   .btn.wa{background:#25d366}
-  .btn.warn{background:#c00000}
   .btn:disabled{opacity:.5;cursor:default}
   .bar{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
   .stats{display:flex;gap:22px;flex-wrap:wrap;font-size:11px;color:#667;text-transform:uppercase;letter-spacing:.04em}
@@ -47,6 +47,9 @@
   th{background:#eef2f8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#445}
   td.n,th.n{text-align:right}
   td.ts{white-space:nowrap;font-family:Consolas,monospace;font-size:12px;color:#445}
+  .fac{display:block;font-size:11px;font-weight:400;color:#667;margin-top:1px}
+  td.names{font-size:12px}
+  td,th{word-break:normal;overflow-wrap:anywhere}
   tr.tot td{font-weight:700;background:#f3f6fb}
   tr.short td{color:#9c0006;font-weight:700;background:#fff3f4}
   .hide{display:none}
@@ -58,12 +61,20 @@
     body{background:#fff}
     body > *{display:none !important}
     #printArea{display:block !important;padding:0}
-    #printArea h1{font-size:18px;margin:0 0 2px}
-    #printArea .sub{font-size:12px;color:#444;margin-bottom:14px}
-    #printArea h3,#printArea h4{page-break-after:avoid}
-    table{font-size:10.5px}
+    #printArea h1{font-size:15px;margin:0 0 2px}
+    #printArea .sub{font-size:10px;color:#444;margin-bottom:8px}
+    #printArea h3{font-size:11.5px;margin:9px 0 2px;page-break-after:avoid}
+    #printArea h4{font-size:10px;margin:7px 0 1px;page-break-after:avoid}
+    table{font-size:8.5px;margin-top:3px}
+    th,td{padding:2.5px 4px}
+    th{background:#eef2f8 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    thead{display:table-header-group}
+    tr{page-break-inside:avoid}
+    .fac{font-size:8px}
+    td.names{font-size:8px}
+    tr.tot td{background:#f3f6fb !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     tr.short td{color:#9c0006 !important;font-weight:700}
-    @page{size:A4;margin:13mm}
+    @page{size:A4 portrait;margin:10mm}
   }
 </style>
 </head>
@@ -99,7 +110,7 @@
     <div id="mMsg" class="msg"></div>
     <div class="card">
       <div class="grid">
-        <div><label for="course">Course / Department</label><select id="course"></select></div>
+        <div class="wide"><label for="course">Course / Department</label><select id="course"></select></div>
         <div><label for="sem">Semester</label><select id="sem"></select></div>
         <div><label for="date">Date</label><input type="date" id="date"></div>
         <div><label for="subject">Subject / Period <span class="mut">(optional)</span></label>
@@ -157,7 +168,7 @@
       <div class="card" id="aParent" style="display:none">
         <h3 style="margin-top:0">Parents' message (semester-wise)</h3>
         <div class="grid">
-          <div><label for="pSem">Semester / WhatsApp group</label><select id="pSem" onchange="buildParent()"></select></div>
+          <div class="wide"><label for="pSem">Semester / WhatsApp group</label><select id="pSem" onchange="buildParent()"></select></div>
         </div>
         <pre id="pText"></pre>
         <div class="bar">
@@ -170,7 +181,7 @@
       <div class="card" id="aDetail" style="display:none">
         <h3 style="margin-top:0">Daily detailed summary</h3>
         <div id="dHtml"></div>
-        <div class="bar"><button class="btn" onclick="printDoc(dailyPrint)">Save daily report as PDF</button></div>
+        <div class="bar"><button class="btn" onclick="printDoc(dailyPrint)">Save daily report as PDF (A4 portrait)</button></div>
       </div>
       <!-- monthly -->
       <div class="card">
@@ -208,17 +219,16 @@ var admRows = [], parentText = "", dailyPrint = "", monthPrint = "", shortageTex
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? "" : s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
-/* credentials:"omit" strips the Google session so the call is always
-   anonymous - that is what makes this work on any phone.
-   NOTE: a conflict reply comes back as ok:false + conflict:true and must
-   NOT be treated as an error - it is a question for the user. */
+/* credentials:"omit" keeps the call anonymous so it works on any phone.
+   A conflict reply is ok:false + conflict:true and must NOT throw -
+   it is a question for the user, not an error. */
 function api(body){
   return fetch(API, { method:"POST", credentials:"omit", redirect:"follow",
       headers:{ "Content-Type":"text/plain;charset=utf-8" },
       body: JSON.stringify(body) })
     .then(function(r){ return r.json(); })
     .then(function(j){
-      if (j && j.conflict) return j;                       // pass through to the caller
+      if (j && j.conflict) return j;
       if (!j || !j.ok) throw new Error((j && j.error) || 'Unknown server error.');
       return j;
     });
@@ -228,7 +238,6 @@ function pad(n){ return (n < 10 ? '0' : '') + n; }
 function today(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function firstOfMonth(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-01'; }
 function pretty(iso){ if(!iso) return ''; var a = String(iso).split('-'); return a[2]+'-'+a[1]+'-'+a[0]; }
-/* "2026-09-19 14:35" -> "19-09-2026 14:35" */
 function prettyStamp(ts){
   if (!ts) return '-';
   var p = String(ts).split(' ');
@@ -364,7 +373,6 @@ function postAttendance(override){
     .then(function(j){
       $('save').disabled = false;
 
-      /* another faculty already marked this class - ask before overwriting */
       if (j.conflict){
         say($('mMsg'), '&#9888; Already marked by <b>' + esc(j.markedBy) + '</b> on '
           + esc(prettyStamp(j.markedAt)) + '. Waiting for your confirmation&hellip;', 'warn');
@@ -539,7 +547,7 @@ function dlTxt(){
   say($('pMsg'), '&#10003; ' + fn + ' downloaded.', 'ok');
 }
 
-/* ---- daily detailed summary ---- */
+/* ---- daily detailed summary: one A4-portrait report ---- */
 function buildDetail(){
   var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [], gT = 0, gA = 0;
   admRows.forEach(function(r){
@@ -556,9 +564,13 @@ function buildDetail(){
     if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
     return A.course.localeCompare(B.course);
   });
+
   var h = [];
-  h.push('<h3>Semester-wise summary</h3>');
-  h.push('<table><thead><tr><th>Semester</th><th class="n">Marked</th><th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
+
+  /* 1. semester-wise */
+  h.push('<h3>1. Semester-wise summary</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th class="n">Strength</th><th class="n">Present</th>'
+       + '<th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
   semOrder.forEach(function(s){
     var d = semAgg[s];
     h.push('<tr><td>Semester '+esc(s)+'</td><td class="n">'+d.t+'</td><td class="n">'+(d.t-d.a)
@@ -568,38 +580,37 @@ function buildDetail(){
     +'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
-  h.push('<h3>Course-wise summary</h3>');
-  h.push('<table><thead><tr><th>Semester</th><th>Course / Department</th><th class="n">Marked</th><th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
+  /* 2. course-wise */
+  h.push('<h3>2. Course-wise summary</h3>');
+  h.push('<table><thead><tr><th>Semester</th><th>Course / Department</th><th class="n">Strength</th>'
+       + '<th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
   csOrder.forEach(function(k){
     var d = csAgg[k];
-    h.push('<tr><td>Sem '+esc(d.sem)+'</td><td>'+esc(d.course)+'</td><td class="n">'+d.t+'</td><td class="n">'
-      +(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'+pctTxt(d.t-d.a, d.t)+'</td></tr>');
+    h.push('<tr><td>Sem '+esc(d.sem)+'</td><td>'+esc(d.course)+'</td><td class="n">'+d.t
+      +'</td><td class="n">'+(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'
+      +pctTxt(d.t-d.a, d.t)+'</td></tr>');
   });
+  h.push('<tr class="tot"><td colspan="2">College total</td><td class="n">'+gT+'</td><td class="n">'
+    +(gT-gA)+'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
+  /* 3. class-wise detail - no Subject, no Marked At, Present added, faculty in small text */
   var g = groupClasses(admRows);
-
-  /* submission log - who marked what, and exactly when */
-  h.push('<h3>Submission log (marking time)</h3>');
-  h.push('<table><thead><tr><th>Marked At</th><th>Faculty</th><th>Semester</th><th>Course</th><th>Subject</th><th class="n">Records</th><th>Note</th></tr></thead><tbody>');
-  g.keys.slice().sort(function(a,b){
-    return String(g.map[a].markedAt).localeCompare(String(g.map[b].markedAt));
-  }).forEach(function(k){
-    var c = g.map[k];
-    h.push('<tr><td class="ts">'+esc(prettyStamp(c.markedAt))+'</td><td>'+esc(c.faculty)+'</td><td>Sem '
-      +esc(c.sem)+'</td><td>'+esc(c.course)+'</td><td>'+esc(c.subject || '-')+'</td><td class="n">'
-      +c.total+'</td><td>'+(c.overridden ? 'Overrode an earlier entry' : '-')+'</td></tr>');
-  });
-  h.push('</tbody></table>');
-
-  h.push('<h3>Class-wise detail</h3>');
-  h.push('<table><thead><tr><th>Semester</th><th>Course</th><th>Faculty</th><th>Subject</th><th>Marked At</th><th class="n">Str.</th><th class="n">Abs.</th><th>Absentees</th></tr></thead><tbody>');
+  h.push('<h3>3. Class-wise detail</h3>');
+  h.push('<table><thead><tr><th>Sem</th><th>Course / Faculty</th><th class="n">Str.</th>'
+       + '<th class="n">Present</th><th class="n">Absent</th><th class="n">%</th>'
+       + '<th>Absentees (Roll No &ndash; Name)</th></tr></thead><tbody>');
   g.keys.forEach(function(k){
     var c = g.map[k];
-    var names = c.abs.map(function(r){ return r.roll + ' ' + r.name; }).join(', ') || 'Nil';
-    h.push('<tr><td>Sem '+esc(c.sem)+'</td><td>'+esc(c.course)+'</td><td>'+esc(c.faculty)+'</td><td>'
-      +esc(c.subject || '-')+'</td><td class="ts">'+esc(prettyStamp(c.markedAt))+'</td><td class="n">'+c.total
-      +'</td><td class="n">'+c.abs.length+'</td><td>'+esc(names)+'</td></tr>');
+    var names = c.abs.map(function(r){ return r.roll + ' - ' + r.name; }).join(', ') || 'Nil';
+    h.push('<tr><td>'+esc(c.sem)+'</td>'
+      + '<td>'+esc(c.course)+'<span class="fac">Faculty: '+esc(c.faculty)
+      +   (c.overridden ? ' (overrode an earlier entry)' : '')+'</span></td>'
+      + '<td class="n">'+c.total+'</td>'
+      + '<td class="n">'+(c.total - c.abs.length)+'</td>'
+      + '<td class="n">'+c.abs.length+'</td>'
+      + '<td class="n">'+pctTxt(c.total - c.abs.length, c.total)+'</td>'
+      + '<td class="names">'+esc(names)+'</td></tr>');
   });
   h.push('</tbody></table>');
 
@@ -607,6 +618,7 @@ function buildDetail(){
   $('dHtml').innerHTML = body;
   dailyPrint = '<h1>' + esc(COLLEGE) + ' &mdash; Daily Attendance Report</h1>'
     + '<div class="sub">Date: ' + pretty($('aDate').value)
+    + ' &nbsp;|&nbsp; Classes marked: ' + g.keys.length
     + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
 }
 
@@ -635,7 +647,6 @@ function buildMonthly(list){
     s.p = s.held ? (s.present / s.held * 100) : null;
     s.short = (s.p !== null && s.p < thr);
   });
-  /* aggregates */
   var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [];
   var gHeld = 0, gPres = 0, gShort = 0;
   list.forEach(function(s){
@@ -680,7 +691,6 @@ function buildMonthly(list){
   });
   h.push('</tbody></table>');
 
-  /* shortage list, semester then course */
   var shorts = list.filter(function(s){ return s.short; });
   shorts.sort(function(a,b){
     if ((+a.sem||0) !== (+b.sem||0)) return (+a.sem||0) - (+b.sem||0);
@@ -701,7 +711,6 @@ function buildMonthly(list){
     h.push('</tbody></table>');
   }
 
-  /* full list grouped semester then course */
   h.push('<h3>Full student list (semester-wise, course-wise)</h3>');
   csOrder.forEach(function(k){
     var d = csAgg[k];
@@ -711,12 +720,12 @@ function buildMonthly(list){
       + ' &nbsp;(' + grp.length + ' students, ' + pctTxt(d.pres, d.held) + ' overall)</h4>');
     h.push('<table><thead><tr><th class="n">#</th><th>Roll No</th><th>Student Name</th>'
          + '<th class="n">Sessions</th><th class="n">Present</th><th class="n">Absent</th>'
-         + '<th class="n">%</th><th>Last Marked</th><th>Status</th></tr></thead><tbody>');
+         + '<th class="n">%</th><th>Status</th></tr></thead><tbody>');
     grp.forEach(function(s, i){
       h.push('<tr'+(s.short?' class="short"':'')+'><td class="n">'+(i+1)+'</td><td>'+esc(s.roll)
         +'</td><td>'+esc(s.name)+'</td><td class="n">'+s.held+'</td><td class="n">'+s.present
         +'</td><td class="n">'+s.absent+'</td><td class="n">'+(s.p===null?'-':s.p.toFixed(1)+'%')
-        +'</td><td class="ts">'+esc(prettyStamp(s.lastMarkedAt))+'</td><td>'+(s.short?'SHORT':'OK')+'</td></tr>');
+        +'</td><td>'+(s.short?'SHORT':'OK')+'</td></tr>');
     });
     h.push('</tbody></table>');
   });
@@ -728,7 +737,6 @@ function buildMonthly(list){
     + '<div class="sub">Period: ' + period + ' &nbsp;|&nbsp; Shortage threshold: ' + thr + '%'
     + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
 
-  /* plain-text shortage list */
   var L = [];
   L.push(COLLEGE.toUpperCase());
   L.push('ATTENDANCE SHORTAGE LIST (below ' + thr + '%)');
