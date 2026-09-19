@@ -23,6 +23,7 @@
   .btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:15px;cursor:pointer}
   .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
   .btn.wa{background:#25d366}
+  .btn.warn{background:#c00000}
   .btn:disabled{opacity:.5;cursor:default}
   .bar{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
   .stats{display:flex;gap:22px;flex-wrap:wrap;font-size:11px;color:#667;text-transform:uppercase;letter-spacing:.04em}
@@ -39,11 +40,13 @@
   .msg.ok{background:#e7f6ea;color:#145c28;border:1px solid #a9d9b6;display:block}
   .msg.err{background:#fdeaea;color:#8b1a1a;border:1px solid #e9b4b4;display:block}
   .msg.info{background:#eaf1fb;color:#1b3d70;border:1px solid #b6cbe9;display:block}
+  .msg.warn{background:#fff6e5;color:#7a4b00;border:1px solid #efc98a;display:block}
   pre{background:#fbfcfd;border:1px solid var(--line);border-radius:6px;padding:13px;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;font-size:13px;max-height:400px;overflow:auto}
   table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
   th,td{padding:7px 9px;border:1px solid #cfd5e0;text-align:left}
   th{background:#eef2f8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#445}
   td.n,th.n{text-align:right}
+  td.ts{white-space:nowrap;font-family:Consolas,monospace;font-size:12px;color:#445}
   tr.tot td{font-weight:700;background:#f3f6fb}
   tr.short td{color:#9c0006;font-weight:700;background:#fff3f4}
   .hide{display:none}
@@ -65,7 +68,6 @@
 </style>
 </head>
 <body>
-
 <header>
   <div>
     <h1>Manas College &mdash; Attendance</h1>
@@ -73,15 +75,12 @@
   </div>
   <button class="out hide" id="btnOut" onclick="logout()">Sign out</button>
 </header>
-
 <nav id="nav" class="hide">
   <button id="tabMark" class="on" onclick="show('mark')">Mark Attendance</button>
   <button id="tabMine" onclick="show('mine')">My Submissions</button>
   <button id="tabAdm"  onclick="show('adm')">Admin</button>
 </nav>
-
 <div class="wrap">
-
   <!-- ============ LOGIN ============ -->
   <div id="login">
     <div id="lMsg" class="msg"></div>
@@ -95,7 +94,6 @@
       <p class="mut" style="margin:12px 0 0">Not in the list? Ask the administrator to add you to the Faculty sheet.</p>
     </div>
   </div>
-
   <!-- ============ MARK ============ -->
   <div id="mark" class="hide">
     <div id="mMsg" class="msg"></div>
@@ -125,7 +123,6 @@
       <div id="list"></div>
     </div>
   </div>
-
   <!-- ============ MY SUBMISSIONS ============ -->
   <div id="mine" class="hide">
     <div id="nMsg" class="msg"></div>
@@ -138,11 +135,9 @@
     </div>
     <div id="nOut"></div>
   </div>
-
   <!-- ============ ADMIN ============ -->
   <div id="adm" class="hide">
     <div id="aMsg" class="msg"></div>
-
     <div class="card" id="aLock">
       <div class="grid">
         <div><label for="aPin">Admin Passcode</label>
@@ -150,9 +145,7 @@
         <div style="align-self:end"><button class="btn" onclick="unlock()">Unlock reports</button></div>
       </div>
     </div>
-
     <div id="aBody" class="hide">
-
       <!-- daily -->
       <div class="card">
         <h3 style="margin-top:0">Daily report</h3>
@@ -161,7 +154,6 @@
           <div style="align-self:end"><button class="btn" onclick="loadAdmin()">Load day</button></div>
         </div>
       </div>
-
       <div class="card" id="aParent" style="display:none">
         <h3 style="margin-top:0">Parents' message (semester-wise)</h3>
         <div class="grid">
@@ -175,13 +167,11 @@
         </div>
         <div id="pMsg" class="msg" style="margin-top:12px"></div>
       </div>
-
       <div class="card" id="aDetail" style="display:none">
         <h3 style="margin-top:0">Daily detailed summary</h3>
         <div id="dHtml"></div>
         <div class="bar"><button class="btn" onclick="printDoc(dailyPrint)">Save daily report as PDF</button></div>
       </div>
-
       <!-- monthly -->
       <div class="card">
         <h3 style="margin-top:0">Monthly / period report</h3>
@@ -194,7 +184,6 @@
         </div>
         <p class="mut" style="margin:12px 0 0">Defaults to the 1st of this month up to today. Percentages are based on the classes actually marked in this app.</p>
       </div>
-
       <div class="card" id="mOut" style="display:none">
         <div id="mHtml"></div>
         <div class="bar">
@@ -204,14 +193,10 @@
         <p class="mut" style="margin:10px 0 0">In the print dialog choose <b>Destination &rarr; Save as PDF</b>. Tick <b>Background graphics</b> if you want the shading too.</p>
         <div id="mMsg2" class="msg" style="margin-top:12px"></div>
       </div>
-
     </div>
   </div>
-
 </div>
-
 <div id="printArea"></div>
-
 <script>
 /* ===== CONFIG ===== */
 var API = "https://script.google.com/macros/s/AKfycbwC-lcFtK6CajrYS0eZIgcpd0kDz378rPAt6Vy0u7kFGOMLBUzwkfOIgfRZrR99Vgd1/exec";
@@ -219,34 +204,44 @@ var API = "https://script.google.com/macros/s/AKfycbwC-lcFtK6CajrYS0eZIgcpd0kDz3
 var STUDENTS = [], rows = [], COLLEGE = "Manas College";
 var ME = { name:"", pin:"" }, ADMIN_PIN = "";
 var admRows = [], parentText = "", dailyPrint = "", monthPrint = "", shortageText = "";
+
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? "" : s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
 /* credentials:"omit" strips the Google session so the call is always
-   anonymous - that is what makes this work on any phone. */
+   anonymous - that is what makes this work on any phone.
+   NOTE: a conflict reply comes back as ok:false + conflict:true and must
+   NOT be treated as an error - it is a question for the user. */
 function api(body){
   return fetch(API, { method:"POST", credentials:"omit", redirect:"follow",
       headers:{ "Content-Type":"text/plain;charset=utf-8" },
       body: JSON.stringify(body) })
     .then(function(r){ return r.json(); })
-    .then(function(j){ if(!j.ok) throw new Error(j.error); return j; });
+    .then(function(j){
+      if (j && j.conflict) return j;                       // pass through to the caller
+      if (!j || !j.ok) throw new Error((j && j.error) || 'Unknown server error.');
+      return j;
+    });
 }
-
 function say(el, text, kind){ el.className = 'msg ' + kind; el.innerHTML = text; }
 function pad(n){ return (n < 10 ? '0' : '') + n; }
 function today(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function firstOfMonth(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-01'; }
 function pretty(iso){ if(!iso) return ''; var a = String(iso).split('-'); return a[2]+'-'+a[1]+'-'+a[0]; }
+/* "2026-09-19 14:35" -> "19-09-2026 14:35" */
+function prettyStamp(ts){
+  if (!ts) return '-';
+  var p = String(ts).split(' ');
+  return pretty(p[0]) + (p[1] ? ' ' + p[1] : '');
+}
 function pct(p, t){ return t ? (p / t * 100).toFixed(1) : null; }
 function pctTxt(p, t){ var x = pct(p, t); return x === null ? '-' : x + '%'; }
-
 function show(which){
   ['mark','mine','adm'].forEach(function(id){ $(id).className = (id === which) ? '' : 'hide'; });
   $('tabMark').className = which === 'mark' ? 'on' : '';
   $('tabMine').className = which === 'mine' ? 'on' : '';
   $('tabAdm').className  = which === 'adm'  ? 'on' : '';
 }
-
 function printDoc(html){
   if (!html){ alert('Generate the report first.'); return; }
   $('printArea').innerHTML = html;
@@ -293,7 +288,6 @@ function login(){
     })
     .catch(function(e){ $('btnIn').disabled = false; say($('lMsg'), e.message, 'err'); });
 }
-
 function logout(){
   ME = { name:"", pin:"" }; ADMIN_PIN = ""; admRows = [];
   dailyPrint = monthPrint = shortageText = "";
@@ -355,17 +349,42 @@ function stats(){
   $('sAbs').textContent = a;
   $('sPct').textContent = pctTxt(p, rows.length);
 }
+
+/* ---- submit, with the duplicate-marking override prompt ---- */
 function save(){
   if (!rows.length){ say($('mMsg'), 'Nothing to submit.', 'err'); return; }
+  postAttendance(false);
+}
+function postAttendance(override){
   $('save').disabled = true;
-  say($('mMsg'), 'Submitting&hellip;', 'info');
+  say($('mMsg'), override ? 'Overriding the earlier entry&hellip;' : 'Submitting&hellip;', 'info');
   api({ action:'save', faculty:ME.name, pin:ME.pin,
         date:$('date').value, course:$('course').value, semester:$('sem').value,
-        subject:$('subject').value.trim(), records:rows })
+        subject:$('subject').value.trim(), records:rows, override:(override === true) })
     .then(function(j){
       $('save').disabled = false;
+
+      /* another faculty already marked this class - ask before overwriting */
+      if (j.conflict){
+        say($('mMsg'), '&#9888; Already marked by <b>' + esc(j.markedBy) + '</b> on '
+          + esc(prettyStamp(j.markedAt)) + '. Waiting for your confirmation&hellip;', 'warn');
+        var yes = window.confirm(
+          'Attendance of these students has already been marked by "' + j.markedBy +
+          '" on ' + prettyStamp(j.markedAt) + '.\n\n' +
+          'Do you wish to override it?\n\n' +
+          'OK = override (the earlier entry will be deleted)\nCancel = keep the earlier entry');
+        if (yes){ postAttendance(true); }
+        else {
+          say($('mMsg'), 'Not saved. The attendance marked by <b>' + esc(j.markedBy)
+            + '</b> on ' + esc(prettyStamp(j.markedAt)) + ' has been kept.', 'info');
+        }
+        return;
+      }
+
       say($('mMsg'), '&#10003; Saved ' + j.saved + ' records for ' + esc($('course').value)
-        + ' &mdash; Semester ' + esc($('sem').value) + ' on ' + pretty($('date').value) + '.', 'ok');
+        + ' &mdash; Semester ' + esc($('sem').value) + ' on ' + pretty($('date').value)
+        + ' at <b>' + esc(prettyStamp(j.markedAt)) + '</b>.'
+        + (j.overrodeFaculty ? ' Overrode the earlier entry by <b>' + esc(j.overrodeFaculty) + '</b>.' : ''), 'ok');
     })
     .catch(function(e){ $('save').disabled = false; say($('mMsg'), 'Save failed: ' + e.message, 'err'); });
 }
@@ -386,6 +405,7 @@ function loadMine(){
         var c = g.map[k];
         return '<div class="card"><h3 style="margin-top:0">' + esc(c.course)
           + ' &mdash; Semester ' + esc(c.sem) + (c.subject ? ' &mdash; ' + esc(c.subject) : '') + '</h3>'
+          + '<p class="mut">Marked at <b>' + esc(prettyStamp(c.markedAt)) + '</b></p>'
           + '<p class="mut">Strength ' + c.total + ' &nbsp;|&nbsp; Present ' + (c.total - c.abs.length)
           + ' &nbsp;|&nbsp; Absent ' + c.abs.length + ' &nbsp;|&nbsp; ' + pctTxt(c.total - c.abs.length, c.total) + '</p>'
           + (c.abs.length
@@ -401,7 +421,6 @@ function loadMine(){
 
 /* ---------- admin unlock ---------- */
 $('aPin').addEventListener('keydown', function(ev){ if (ev.key === 'Enter') unlock(); });
-
 function unlock(){
   var pin = $('aPin').value.trim();
   if (!pin){ say($('aMsg'), 'Enter the admin passcode.', 'err'); return; }
@@ -417,14 +436,12 @@ function unlock(){
     })
     .catch(function(e){ say($('aMsg'), e.message, 'err'); });
 }
-
 function loadAdmin(){
   say($('aMsg'), 'Loading&hellip;', 'info');
   api({ action:'admin', adminPin:ADMIN_PIN, date:$('aDate').value })
     .then(function(j){ $('aMsg').className = 'msg'; onAdmin(j.rows); })
     .catch(function(e){ say($('aMsg'), e.message, 'err'); });
 }
-
 function onAdmin(data){
   admRows = data || [];
   if (!admRows.length){
@@ -445,16 +462,18 @@ function onAdmin(data){
   say($('aMsg'), '&#10003; Loaded ' + admRows.length + ' records for ' + pretty($('aDate').value)
     + ' across ' + sems.length + ' semester(s).', 'ok');
 }
-
 function groupClasses(data){
   var map = {}, keys = [];
   (data || []).forEach(function(r){
     var k = r.course + '||' + r.sem + '||' + r.subject + '||' + r.faculty;
     if (!map[k]){
-      map[k] = { course:r.course, sem:r.sem, subject:r.subject, faculty:r.faculty, total:0, abs:[] };
+      map[k] = { course:r.course, sem:r.sem, subject:r.subject, faculty:r.faculty,
+                 markedAt:'', overridden:false, total:0, abs:[] };
       keys.push(k);
     }
     map[k].total++;
+    if (r.markedAt && r.markedAt > map[k].markedAt) map[k].markedAt = r.markedAt;
+    if (r.remarks && r.remarks.indexOf('[Overrode ') >= 0) map[k].overridden = true;
     if (r.status === 'Absent') map[k].abs.push(r);
   });
   keys.sort(function(a,b){
@@ -475,7 +494,6 @@ function buildParent(){
     if (r.status === 'Absent') byCourse[r.course].push(r.name);
   });
   order.sort();
-
   var L = [], any = false;
   L.push(COLLEGE.toUpperCase());
   L.push('Semester ' + sem + ' - Absentees - ' + pretty($('aDate').value));
@@ -491,14 +509,11 @@ function buildParent(){
   });
   if (!any) L.push('No absentees today.');
   L.push('- ' + COLLEGE);
-
   parentText = L.join('\n');
   $('pText').textContent = parentText;
   $('pMsg').className = 'msg';
 }
-
 function waShare(){ window.open('https://wa.me/?text=' + encodeURIComponent(parentText), '_blank'); }
-
 function copyParent(){
   var done = function(){ say($('pMsg'), '&#10003; Copied. Paste into the Semester ' + $('pSem').value + ' parents\' group.', 'ok'); };
   if (navigator.clipboard && navigator.clipboard.writeText){
@@ -512,7 +527,6 @@ function copyParent(){
     document.body.removeChild(t);
   }
 }
-
 function download(fn, text){
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type:'text/plain;charset=utf-8' }));
@@ -542,7 +556,6 @@ function buildDetail(){
     if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
     return A.course.localeCompare(B.course);
   });
-
   var h = [];
   h.push('<h3>Semester-wise summary</h3>');
   h.push('<table><thead><tr><th>Semester</th><th class="n">Marked</th><th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
@@ -565,14 +578,28 @@ function buildDetail(){
   h.push('</tbody></table>');
 
   var g = groupClasses(admRows);
+
+  /* submission log - who marked what, and exactly when */
+  h.push('<h3>Submission log (marking time)</h3>');
+  h.push('<table><thead><tr><th>Marked At</th><th>Faculty</th><th>Semester</th><th>Course</th><th>Subject</th><th class="n">Records</th><th>Note</th></tr></thead><tbody>');
+  g.keys.slice().sort(function(a,b){
+    return String(g.map[a].markedAt).localeCompare(String(g.map[b].markedAt));
+  }).forEach(function(k){
+    var c = g.map[k];
+    h.push('<tr><td class="ts">'+esc(prettyStamp(c.markedAt))+'</td><td>'+esc(c.faculty)+'</td><td>Sem '
+      +esc(c.sem)+'</td><td>'+esc(c.course)+'</td><td>'+esc(c.subject || '-')+'</td><td class="n">'
+      +c.total+'</td><td>'+(c.overridden ? 'Overrode an earlier entry' : '-')+'</td></tr>');
+  });
+  h.push('</tbody></table>');
+
   h.push('<h3>Class-wise detail</h3>');
-  h.push('<table><thead><tr><th>Semester</th><th>Course</th><th>Faculty</th><th>Subject</th><th class="n">Str.</th><th class="n">Abs.</th><th>Absentees</th></tr></thead><tbody>');
+  h.push('<table><thead><tr><th>Semester</th><th>Course</th><th>Faculty</th><th>Subject</th><th>Marked At</th><th class="n">Str.</th><th class="n">Abs.</th><th>Absentees</th></tr></thead><tbody>');
   g.keys.forEach(function(k){
     var c = g.map[k];
     var names = c.abs.map(function(r){ return r.roll + ' ' + r.name; }).join(', ') || 'Nil';
     h.push('<tr><td>Sem '+esc(c.sem)+'</td><td>'+esc(c.course)+'</td><td>'+esc(c.faculty)+'</td><td>'
-      +esc(c.subject || '-')+'</td><td class="n">'+c.total+'</td><td class="n">'+c.abs.length
-      +'</td><td>'+esc(names)+'</td></tr>');
+      +esc(c.subject || '-')+'</td><td class="ts">'+esc(prettyStamp(c.markedAt))+'</td><td class="n">'+c.total
+      +'</td><td class="n">'+c.abs.length+'</td><td>'+esc(names)+'</td></tr>');
   });
   h.push('</tbody></table>');
 
@@ -594,7 +621,6 @@ function loadMonthly(){
     .then(function(j){ $('aMsg').className = 'msg'; buildMonthly(j.students); })
     .catch(function(e){ say($('aMsg'), e.message, 'err'); });
 }
-
 function buildMonthly(list){
   list = list || [];
   if (!list.length){
@@ -604,13 +630,11 @@ function buildMonthly(list){
   }
   var thr = parseFloat($('mThr').value) || 75;
   var period = pretty($('mFrom').value) + ' to ' + pretty($('mTo').value);
-
   list.forEach(function(s){
     s.absent = s.held - s.present;
     s.p = s.held ? (s.present / s.held * 100) : null;
     s.short = (s.p !== null && s.p < thr);
   });
-
   /* aggregates */
   var semAgg = {}, csAgg = {}, semOrder = [], csOrder = [];
   var gHeld = 0, gPres = 0, gShort = 0;
@@ -624,16 +648,13 @@ function buildMonthly(list){
     B.stu++; B.held += s.held; B.pres += s.present; if (s.short) B.short++;
     gHeld += s.held; gPres += s.present; if (s.short) gShort++;
   });
-  var bySem = function(a,b){ return (+a||0) - (+b||0); };
-  semOrder.sort(bySem);
+  semOrder.sort(function(a,b){ return (+a||0) - (+b||0); });
   csOrder.sort(function(a,b){
     var A = csAgg[a], B = csAgg[b];
     if ((+A.sem||0) !== (+B.sem||0)) return (+A.sem||0) - (+B.sem||0);
     return A.course.localeCompare(B.course);
   });
-
   var h = [];
-
   h.push('<h3>Semester-wise summary</h3>');
   h.push('<table><thead><tr><th>Semester</th><th class="n">Students</th><th class="n">Sessions</th>'
        + '<th class="n">Present</th><th class="n">Attendance %</th><th class="n">Below '+thr+'%</th></tr></thead><tbody>');
@@ -666,12 +687,10 @@ function buildMonthly(list){
     if (a.course !== b.course) return a.course.localeCompare(b.course);
     return a.p - b.p;
   });
-
   h.push('<h3>Shortage list &mdash; below ' + thr + '% attendance</h3>');
   if (!shorts.length){
     h.push('<p class="mut">No student is below ' + thr + '% in this period.</p>');
   } else {
-    var lastKey = '';
     h.push('<table><thead><tr><th>Semester</th><th>Course</th><th>Roll No</th><th>Student Name</th>'
          + '<th class="n">Sessions</th><th class="n">Present</th><th class="n">Absent</th><th class="n">%</th></tr></thead><tbody>');
     shorts.forEach(function(s){
@@ -687,17 +706,17 @@ function buildMonthly(list){
   csOrder.forEach(function(k){
     var d = csAgg[k];
     var grp = list.filter(function(s){ return s.sem === d.sem && s.course === d.course; });
-    grp.sort(function(a,b){ return a.roll.localeCompare(b.roll); });
+    grp.sort(function(a,b){ return String(a.roll).localeCompare(String(b.roll)); });
     h.push('<h4>Semester ' + esc(d.sem) + ' &mdash; ' + esc(d.course)
       + ' &nbsp;(' + grp.length + ' students, ' + pctTxt(d.pres, d.held) + ' overall)</h4>');
     h.push('<table><thead><tr><th class="n">#</th><th>Roll No</th><th>Student Name</th>'
          + '<th class="n">Sessions</th><th class="n">Present</th><th class="n">Absent</th>'
-         + '<th class="n">%</th><th>Status</th></tr></thead><tbody>');
+         + '<th class="n">%</th><th>Last Marked</th><th>Status</th></tr></thead><tbody>');
     grp.forEach(function(s, i){
       h.push('<tr'+(s.short?' class="short"':'')+'><td class="n">'+(i+1)+'</td><td>'+esc(s.roll)
         +'</td><td>'+esc(s.name)+'</td><td class="n">'+s.held+'</td><td class="n">'+s.present
         +'</td><td class="n">'+s.absent+'</td><td class="n">'+(s.p===null?'-':s.p.toFixed(1)+'%')
-        +'</td><td>'+(s.short?'SHORT':'OK')+'</td></tr>');
+        +'</td><td class="ts">'+esc(prettyStamp(s.lastMarkedAt))+'</td><td>'+(s.short?'SHORT':'OK')+'</td></tr>');
     });
     h.push('</tbody></table>');
   });
@@ -705,7 +724,6 @@ function buildMonthly(list){
   var body = h.join('');
   $('mHtml').innerHTML = body;
   $('mOut').style.display = 'block';
-
   monthPrint = '<h1>' + esc(COLLEGE) + ' &mdash; Monthly Attendance Report</h1>'
     + '<div class="sub">Period: ' + period + ' &nbsp;|&nbsp; Shortage threshold: ' + thr + '%'
     + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
@@ -732,7 +750,6 @@ function buildMonthly(list){
   say($('aMsg'), '&#10003; Monthly report ready &mdash; ' + list.length + ' students, '
     + gShort + ' below ' + thr + '%.', 'ok');
 }
-
 function dlShortage(){
   var fn = 'Attendance_Shortage_' + $('mFrom').value + '_to_' + $('mTo').value + '.txt';
   download(fn, shortageText);
