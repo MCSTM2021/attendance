@@ -53,6 +53,8 @@
   td.names{font-size:12px}
   td,th{word-break:normal;overflow-wrap:anywhere}
   tr.tot td{font-weight:700;background:#f3f6fb}
+  tr.dtot td{font-weight:700;background:#f7f9fc}
+  td.dept{font-weight:600;vertical-align:middle}
   tr.short td{color:#9c0006;font-weight:700;background:#fff3f4}
   .hide{display:none}
   .mut{color:#889;font-size:13px}
@@ -77,6 +79,7 @@
     .fac{font-size:8px}
     td.names{font-size:8px}
     tr.tot td{background:#f3f6fb !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    tr.dtot td{background:#f7f9fc !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     tr.short td{color:#9c0006 !important;font-weight:700}
     @page{size:A4 portrait;margin:10mm}
   }
@@ -553,21 +556,24 @@ function dlTxt(){
 
 /* ---- daily detailed summary: one A4-portrait report ---- */
 function buildDetail(){
-  var semAgg = {}, depAgg = {}, semOrder = [], depOrder = [], gT = 0, gA = 0;
+  var semAgg = {}, semOrder = [], gT = 0, gA = 0;
+  var dep = {}, depOrder = [];
+
   admRows.forEach(function(r){
     if (!semAgg[r.sem]){ semAgg[r.sem] = { t:0, a:0 }; semOrder.push(r.sem); }
     semAgg[r.sem].t++; if (r.status === 'Absent') semAgg[r.sem].a++;
 
-    /* department = course only, all semesters pooled */
-    if (!depAgg[r.course]){ depAgg[r.course] = { t:0, a:0, sems:{} }; depOrder.push(r.course); }
-    depAgg[r.course].t++;
-    depAgg[r.course].sems[r.sem] = true;
-    if (r.status === 'Absent') depAgg[r.course].a++;
+    if (!dep[r.course]){ dep[r.course] = { t:0, a:0, sem:{}, semOrder:[] }; depOrder.push(r.course); }
+    var D = dep[r.course];
+    D.t++; if (r.status === 'Absent') D.a++;
+    if (!D.sem[r.sem]){ D.sem[r.sem] = { t:0, a:0 }; D.semOrder.push(r.sem); }
+    D.sem[r.sem].t++; if (r.status === 'Absent') D.sem[r.sem].a++;
 
     gT++; if (r.status === 'Absent') gA++;
   });
   semOrder.sort(function(a,b){ return (+a||0) - (+b||0); });
   depOrder.sort();
+  depOrder.forEach(function(c){ dep[c].semOrder.sort(function(a,b){ return (+a||0) - (+b||0); }); });
 
   var h = [];
 
@@ -586,26 +592,30 @@ function buildDetail(){
     +'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
-  /* 2. department-wise (course only, semesters pooled) */
+  /* 2. department-wise, semesters of each department grouped together */
   h.push('<h3>2. Department-wise summary</h3>');
-  h.push('<table class="fixed"><colgroup><col style="width:40%"><col style="width:12%">'
-       + '<col style="width:12%"><col style="width:12%"><col style="width:12%">'
-       + '<col style="width:12%"></colgroup>');
-  h.push('<thead><tr><th>Department / Course</th><th class="n">Semesters</th><th class="n">Strength</th>'
+  h.push('<table class="fixed"><colgroup><col style="width:34%"><col style="width:14%">'
+       + '<col style="width:13%"><col style="width:13%"><col style="width:13%">'
+       + '<col style="width:13%"></colgroup>');
+  h.push('<thead><tr><th>Department / Course</th><th>Semester</th><th class="n">Strength</th>'
        + '<th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
   depOrder.forEach(function(c){
-    var d = depAgg[c];
-    var nSem = Object.keys(d.sems).length;
-    h.push('<tr><td>'+esc(c)+'</td><td class="n">'+nSem+'</td><td class="n">'+d.t
-      +'</td><td class="n">'+(d.t-d.a)+'</td><td class="n">'+d.a+'</td><td class="n">'
-      +pctTxt(d.t-d.a, d.t)+'</td></tr>');
+    var D = dep[c];
+    D.semOrder.forEach(function(s, i){
+      var d = D.sem[s];
+      h.push('<tr>'
+        + (i === 0 ? '<td class="dept" rowspan="'+(D.semOrder.length + 1)+'">'+esc(c)+'</td>' : '')
+        + '<td>Semester '+esc(s)+'</td><td class="n">'+d.t+'</td><td class="n">'+(d.t-d.a)
+        + '</td><td class="n">'+d.a+'</td><td class="n">'+pctTxt(d.t-d.a, d.t)+'</td></tr>');
+    });
+    h.push('<tr class="dtot"><td>Department total</td><td class="n">'+D.t+'</td><td class="n">'
+      +(D.t-D.a)+'</td><td class="n">'+D.a+'</td><td class="n">'+pctTxt(D.t-D.a, D.t)+'</td></tr>');
   });
-  h.push('<tr class="tot"><td>College total</td><td class="n">'+semOrder.length+'</td><td class="n">'+gT
-    +'</td><td class="n">'+(gT-gA)+'</td><td class="n">'+gA+'</td><td class="n">'
-    +pctTxt(gT-gA, gT)+'</td></tr>');
+  h.push('<tr class="tot"><td colspan="2">College total</td><td class="n">'+gT+'</td><td class="n">'
+    +(gT-gA)+'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
-  /* 3. class-wise detail */
+  /* 3. class-wise detail - absentee names only, no roll numbers */
   var g = groupClasses(admRows);
   h.push('<h3>3. Class-wise detail</h3>');
   h.push('<table class="fixed"><colgroup><col style="width:5%"><col style="width:23%">'
@@ -613,10 +623,10 @@ function buildDetail(){
        + '<col style="width:7%"><col style="width:46%"></colgroup>');
   h.push('<thead><tr><th>Sem</th><th>Course / Faculty</th><th class="n">Str.</th>'
        + '<th class="n">Pres.</th><th class="n">Abs.</th><th class="n">%</th>'
-       + '<th>Absentees (Roll No &ndash; Name)</th></tr></thead><tbody>');
+       + '<th>Absentees</th></tr></thead><tbody>');
   g.keys.forEach(function(k){
     var c = g.map[k];
-    var names = c.abs.map(function(r){ return r.roll + ' - ' + r.name; }).join(', ') || 'Nil';
+    var names = c.abs.map(function(r){ return r.name; }).join(', ') || 'Nil';
     h.push('<tr><td class="n">'+esc(c.sem)+'</td>'
       + '<td>'+esc(c.course)+'<span class="fac">Faculty: '+esc(c.faculty)
       +   (c.overridden ? ' (overrode an earlier entry)' : '')+'</span></td>'
@@ -635,6 +645,7 @@ function buildDetail(){
     + ' &nbsp;|&nbsp; Classes marked: ' + g.keys.length
     + ' &nbsp;|&nbsp; Generated: ' + pretty(today()) + '</div>' + body;
 }
+  
 /* ---- monthly / period report ---- */
 function loadMonthly(){
   var f = $('mFrom').value, t = $('mTo').value;
