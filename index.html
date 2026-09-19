@@ -499,7 +499,7 @@ function groupClasses(data){
   return { map:map, keys:keys };
 }
 
-/* ---- parents' message: semester number, course name, absent names only ---- */
+/* ---- parents' message: WhatsApp-formatted, semester-wise ---- */
 function buildParent(){
   var sem = $('pSem').value;
   var sub = admRows.filter(function(r){ return r.sem === sem; });
@@ -509,21 +509,32 @@ function buildParent(){
     if (r.status === 'Absent') byCourse[r.course].push(r.name);
   });
   order.sort();
+
   var L = [], any = false;
-  L.push(COLLEGE.toUpperCase());
-  L.push('Semester ' + sem + ' - Absentees - ' + pretty($('aDate').value));
+  L.push('*' + COLLEGE.toUpperCase() + '*');                       // bold heading
+  L.push('*Daily Attendance — Semester ' + sem + '*');             // bold sub-heading
+  L.push('_Date: ' + pretty($('aDate').value) + '_');              // italic date
+  L.push('');
+  L.push('- - - - - - - - - - - - - - -');
   L.push('');
   order.forEach(function(c){
-    L.push(c);
+    L.push('*' + c + '*');                                         // bold department
     var names = byCourse[c];
     if (names.length){
       any = true;
+      L.push('Absent (' + names.length + '):');
       names.forEach(function(n, i){ L.push('  ' + (i+1) + '. ' + n); });
-    } else { L.push('  Nil'); }
+    } else {
+      L.push('✅ Everyone Present');
+    }
     L.push('');
   });
-  if (!any) L.push('No absentees today.');
-  L.push('- ' + COLLEGE);
+  L.push('- - - - - - - - - - - - - - -');
+  if (!any) L.push('✅ Everyone Present in all departments today.');
+  L.push('');
+  L.push('_Kindly contact the college office for any clarification._');
+  L.push('*— ' + COLLEGE + '*');
+
   parentText = L.join('\n');
   $('pText').textContent = parentText;
   $('pMsg').className = 'msg';
