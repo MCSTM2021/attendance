@@ -592,29 +592,21 @@ function buildDetail(){
     +'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
 
-  /* 2. department-wise, semesters of each department grouped together */
+ /* 2. department-wise - one line per department */
   h.push('<h3>2. Department-wise summary</h3>');
-  h.push('<table class="fixed"><colgroup><col style="width:34%"><col style="width:14%">'
-       + '<col style="width:13%"><col style="width:13%"><col style="width:13%">'
-       + '<col style="width:13%"></colgroup>');
-  h.push('<thead><tr><th>Department / Course</th><th>Semester</th><th class="n">Strength</th>'
+  h.push('<table class="fixed"><colgroup><col style="width:40%"><col style="width:15%">'
+       + '<col style="width:15%"><col style="width:15%"><col style="width:15%"></colgroup>');
+  h.push('<thead><tr><th>Department / Course</th><th class="n">Strength</th>'
        + '<th class="n">Present</th><th class="n">Absent</th><th class="n">Attendance %</th></tr></thead><tbody>');
   depOrder.forEach(function(c){
     var D = dep[c];
-    D.semOrder.forEach(function(s, i){
-      var d = D.sem[s];
-      h.push('<tr>'
-        + (i === 0 ? '<td class="dept" rowspan="'+(D.semOrder.length + 1)+'">'+esc(c)+'</td>' : '')
-        + '<td>Semester '+esc(s)+'</td><td class="n">'+d.t+'</td><td class="n">'+(d.t-d.a)
-        + '</td><td class="n">'+d.a+'</td><td class="n">'+pctTxt(d.t-d.a, d.t)+'</td></tr>');
-    });
-    h.push('<tr class="dtot"><td>Department total</td><td class="n">'+D.t+'</td><td class="n">'
-      +(D.t-D.a)+'</td><td class="n">'+D.a+'</td><td class="n">'+pctTxt(D.t-D.a, D.t)+'</td></tr>');
+    h.push('<tr><td>'+esc(c)+'</td><td class="n">'+D.t+'</td><td class="n">'+(D.t-D.a)
+      +'</td><td class="n">'+D.a+'</td><td class="n">'+pctTxt(D.t-D.a, D.t)+'</td></tr>');
   });
-  h.push('<tr class="tot"><td colspan="2">College total</td><td class="n">'+gT+'</td><td class="n">'
-    +(gT-gA)+'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
+  h.push('<tr class="tot"><td>College total</td><td class="n">'+gT+'</td><td class="n">'+(gT-gA)
+    +'</td><td class="n">'+gA+'</td><td class="n">'+pctTxt(gT-gA, gT)+'</td></tr>');
   h.push('</tbody></table>');
-
+  
   /* 3. class-wise detail - absentee names only, no roll numbers */
   var g = groupClasses(admRows);
   h.push('<h3>3. Class-wise detail</h3>');
