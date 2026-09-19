@@ -178,8 +178,9 @@
           <div class="wide"><label for="pSem">Semester / WhatsApp group</label><select id="pSem" onchange="buildParent()"></select></div>
         </div>
         <pre id="pText"></pre>
-        <div class="bar">
+       <div class="bar">
           <button class="btn wa" onclick="waShare()">Send on WhatsApp</button>
+          <button class="btn ghost" onclick="nextMessage()">Change message</button>
           <button class="btn ghost" onclick="copyParent()">Copy text</button>
           <button class="btn ghost" onclick="dlTxt()">Download .txt</button>
         </div>
@@ -218,6 +219,28 @@
 <script>
 /* ===== CONFIG ===== */
 var API = "https://script.google.com/macros/s/AKfycbwC-lcFtK6CajrYS0eZIgcpd0kDz378rPAt6Vy0u7kFGOMLBUzwkfOIgfRZrR99Vgd1/exec";
+
+/* ===== Parents' message pool - add or edit freely.
+   Each entry is one or two lines. A message is chosen from the report
+   date, so the same day always shows the same line. ===== */
+var MESSAGES = [
+  ['Every day in college is an opportunity to learn, participate, and grow.',
+   'Kindly help your ward maintain regular attendance and make the most of every learning opportunity.'],
+  ['Consistent attendance is the strongest foundation for good results.',
+   'We request parents to ensure their ward attends college regularly.'],
+  ['Learning happens best when students are present, attentive and involved.',
+   'Your encouragement at home makes a real difference to your ward\'s progress.'],
+  ['Regular attendance builds the discipline and confidence that carry a student far beyond the classroom.',
+   'Thank you for your continued support in this effort.'],
+  ['A class missed is a lesson missed. Steady attendance keeps your ward on track with the syllabus.',
+   'Please encourage punctuality and regularity.'],
+  ['Punctuality and regularity are habits that serve a student for life.',
+   'We are grateful to the parents who help their ward build them early.'],
+  ['Attendance is not just a record - it reflects commitment, curiosity and consistency.',
+   'Kindly support your ward in attending every class.']
+];
+var msgShift = 0;   /* manual "next message" offset */
+
 
 var STUDENTS = [], rows = [], COLLEGE = "Manas College";
 var ME = { name:"", pin:"" }, ADMIN_PIN = "";
@@ -499,6 +522,19 @@ function groupClasses(data){
   return { map:map, keys:keys };
 }
 
+/* pick a message from the date, so the same day is always consistent */
+function pickMessage(iso){
+  if (!MESSAGES.length) return [];
+  var d = new Date(iso + 'T00:00:00');
+  var dayNo = Math.floor(d.getTime() / 86400000);
+  if (isNaN(dayNo)) dayNo = 0;
+  var i = ((dayNo + msgShift) % MESSAGES.length + MESSAGES.length) % MESSAGES.length;
+  return MESSAGES[i];
+}
+function nextMessage(){ msgShift++; buildParent(); }
+
+
+  
 /* ---- parents' message: WhatsApp-formatted, semester-wise ---- */
 function buildParent(){
   var sem = $('pSem').value;
@@ -511,14 +547,16 @@ function buildParent(){
   order.sort();
 
   var L = [], any = false;
-  L.push('*' + COLLEGE.toUpperCase() + '*');                       // bold heading
-  L.push('*Daily Attendance — Semester ' + sem + '*');             // bold sub-heading
-  L.push('_Date: ' + pretty($('aDate').value) + '_');              // italic date
+  L.push('*' + COLLEGE.toUpperCase() + '*');
+  L.push('*Daily Attendance — Semester ' + sem + '*');
+  L.push('_Date: ' + pretty($('aDate').value) + '_');
+  L.push('');
+  pickMessage($('aDate').value).forEach(function(line){ L.push(line); });
   L.push('');
   L.push('- - - - - - - - - - - - - - -');
   L.push('');
   order.forEach(function(c){
-    L.push('*' + c + '*');                                         // bold department
+    L.push('*' + c + '*');
     var names = byCourse[c];
     if (names.length){
       any = true;
@@ -532,16 +570,14 @@ function buildParent(){
   L.push('- - - - - - - - - - - - - - -');
   if (!any) L.push('✅ Everyone Present in all departments today.');
   L.push('');
-  L.push('Every day in college is an opportunity to learn, participate, and grow.');
-  L.push('Kindly help your ward maintain regular attendance and make the most of every learning opportunity.');
-  L.push('');
   L.push('_Kindly contact the college office for any clarification._');
   L.push('*— ' + COLLEGE + '*');
-  
+
   parentText = L.join('\n');
   $('pText').textContent = parentText;
   $('pMsg').className = 'msg';
 }
+  
 function waShare(){ window.open('https://wa.me/?text=' + encodeURIComponent(parentText), '_blank'); }
 function copyParent(){
   var done = function(){ say($('pMsg'), '&#10003; Copied. Paste into the Semester ' + $('pSem').value + ' parents\' group.', 'ok'); };
